@@ -1,8 +1,5 @@
 package com.azzimov.search.model;
 
-import org.springframework.stereotype.Component;
-import org.springframework.web.context.ContextLoaderListener;
-
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
@@ -23,7 +20,7 @@ public class SearchModel implements ServletContextListener {
         URL url1 = classLoader.getResource("application.conf");
         String path1 = url1.getPath();
 
-        URL url = classLoader.getResource("corbeil");
+        URL url = classLoader.getResource("accent");
         String path = url.getPath();
         File[] files = new File(path).listFiles();
         for(File file : files){

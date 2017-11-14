@@ -14,6 +14,10 @@
     <version>1.5.8.RELEASE</version>
   </parent>
 
+  <properties>
+    <client.name>accent</client.name>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -35,19 +39,17 @@
       <version>4.3.12.RELEASE</version>
     </dependency>
 
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
       <version>1.5.8.RELEASE</version>
     </dependency>
 
-    <!--<dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-devtools</artifactId>
       <version>1.5.8.RELEASE</version>
-      &lt;!&ndash;<scope>runtime</scope>&ndash;&gt;
-    </dependency>-->
+    </dependency>
 
 
     <dependency>
@@ -55,9 +57,8 @@
       <artifactId>akka-actor_2.11</artifactId>
       <version>2.5.6</version>
     </dependency>
-
-
   </dependencies>
+
   <build>
     <finalName>azzimov-search</finalName>
     <plugins>
@@ -71,18 +72,12 @@
         </configuration>
       </plugin>
 
-      <!--<plugin>
-        <groupId>org.apache.tomcat.maven</groupId>
-        <artifactId>tomcat7-maven-plugin</artifactId>
-        <version>2.2</version>
-      </plugin>-->
-
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
 
-      <!--<plugin>
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
@@ -93,19 +88,38 @@
             </goals>
             <configuration>
               <sources>
-                <source>src/clients</source>
+                <source>src/clients/${client.name}</source>
               </sources>
             </configuration>
           </execution>
         </executions>
-      </plugin>-->
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.0.2</version>
+        <executions>
+          <execution>
+            <id>copy-client-resource</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${basedir}/target/classes/${client.name}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>src/clients/${client.name}</directory>
+                  <excludes>
+                    <exclude>**/*.java</exclude>
+                  </excludes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 
     </plugins>
-
-    <resources>
-      <resource>
-        <directory>src/clients</directory>
-      </resource>
-    </resources>
   </build>
 </project>
