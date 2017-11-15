@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.azzimov.search</groupId>
   <artifactId>azzimov-search</artifactId>
-  <packaging>war</packaging>
+  <packaging>jar</packaging>
   <version>1.0.0</version>
   <name>azzimov-search Maven Webapp</name>
   <url>http://maven.apache.org</url>

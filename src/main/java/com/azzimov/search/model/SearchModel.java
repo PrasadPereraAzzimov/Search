@@ -1,59 +1,51 @@
 package com.azzimov.search.model;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.Resource;
+
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
-import java.io.File;
-import java.net.URL;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 /**
  * Created by RahulGupta on 2017-11-07.
  */
-//@Component
 @WebListener
 public class SearchModel implements ServletContextListener {
-    @Override
-    public void contextInitialized(ServletContextEvent event) {
-//        super.contextInitialized(event);
-        System.out.print("=================  Context Initialized =================");
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        URL url1 = classLoader.getResource("application.conf");
-        String path1 = url1.getPath();
 
-        URL url = classLoader.getResource("accent");
-        String path = url.getPath();
-        File[] files = new File(path).listFiles();
-        for(File file : files){
-            System.out.println(file);
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Override
+    public void contextInitialized(ServletContextEvent event){
+        try{
+
+            Resource[] resources = applicationContext.getResources("classpath*:**/resources/*.conf");
+            for(Resource resource : resources){
+                InputStreamReader inputStreamReader = new InputStreamReader(resource.getInputStream());
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                StringBuilder stringBuilder = new StringBuilder();
+                String read = null;
+                while ((read = bufferedReader.readLine()) != null){
+                    stringBuilder.append(read);
+                    stringBuilder.append("\n");
+                }
+                System.out.println("====================================");
+                System.out.println(stringBuilder.toString());
+                System.out.println("====================================");
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
         }
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent event) {
-//        super.contextDestroyed(event);
         System.out.print("=================  Context destroyed =================");
     }
-
-
-
-    /*implements ServletContextListener {
-    @Override
-    public void contextInitialized(ServletContextEvent sce) {
-        System.out.println("================  from context listener ===============");
-        readAllConfig();
-    }
-
-    public void readAllConfig() {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        URL url1 = classLoader.getResource("application.conf");
-        String path1 = url1.getPath();
-
-        URL url = classLoader.getResource("corbeil");
-        String path = url.getPath();
-        File[] files = new File(path).listFiles();
-        for(File file : files){
-            System.out.println(file);
-        }
-
-    }*/
 }
