@@ -42,7 +42,7 @@
       <version>${spring.core.version}</version>
     </dependency>
 
-    <dependency>Uni
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
       <version>${spring.boot.version}</version>
