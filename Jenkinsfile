@@ -7,7 +7,7 @@ node{
     stage 'Checkout Sources'
       git branch: 'master',
               credentialsId: 'ff0aca4c-5c80-445b-9de1-3d32c962a301',
-              url: 'https://github.com/GuidyuMobile/Azzimov-Search-Gateway.git'
+              url: 'https://github.com/GuidyuMobile/Azzimov-Search.git'
 
     stage 'User Input'
 //        def console = System.console()
