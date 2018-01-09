@@ -18,15 +18,14 @@
     <resources.plugin.version>3.0.2</resources.plugin.version>
     <apache.commons.lang3.version>3.0</apache.commons.lang3.version>
     <azzimov.search.common.version>1.0-SNAPSHOT</azzimov.search.common.version>
+    <akka.version>2.5.6</akka.version>
   </properties>
-
 
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>2.0.0.M6</version>
   </parent>
-
 
   <dependencies>
     <dependency>
@@ -35,13 +34,16 @@
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>com.typesafe.akka</groupId>
+      <artifactId>akka-actor_2.11</artifactId>
+      <version>${akka.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-webmvc</artifactId>
       <version>${spring.core.version}</version>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
@@ -53,60 +55,48 @@
         </exclusion>
       </exclusions>
     </dependency>
-
     <!--<dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-log4j2</artifactId>
       <version>${spring.boot.version}</version>
     </dependency>-->
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-devtools</artifactId>
       <version>${spring.boot.version}</version>
     </dependency>
-
     <dependency>
       <groupId>com.azzimov.search.common</groupId>
       <artifactId>azzimov-query-result</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
-
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j</artifactId>
       <version>2.10.0</version>
       <type>pom</type>
     </dependency>
-
-
     <dependency>
       <groupId>com.azzimov.search.common</groupId>
       <artifactId>azzimov-search-cache</artifactId>
       <version>${azzimov.search.common.version}</version>
     </dependency>
-
     <dependency>
       <groupId>com.azzimov.search.common</groupId>
       <artifactId>azzimov-search-dto</artifactId>
       <version>${azzimov.search.common.version}</version>
     </dependency>
-
     <dependency>
       <groupId>com.azzimov.search.common</groupId>
       <artifactId>azzimov-search-util</artifactId>
       <version>${azzimov.search.common.version}</version>
     </dependency>
-
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>${apache.commons.lang3.version}</version>
     </dependency>
-
   </dependencies>
-
-
   <build>
     <finalName>azzimov-search</finalName>
     <plugins>
@@ -119,7 +109,6 @@
           <target>${java.version}</target>
         </configuration>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
@@ -127,9 +116,7 @@
           <includes>
             <include>**/*.class</include>
           </includes>
-          <groups>
-            com.azzimov.search.annotation.type.IntegrationTest
-          </groups>
+          <groups>com.azzimov.search.annotation.type.IntegrationTest</groups>
         </configuration>
         <executions>
           <execution>
@@ -140,7 +127,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -154,7 +140,6 @@
           </excludedGroups>
         </configuration>
       </plugin>
-
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
@@ -172,7 +157,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <version>${resources.plugin.version}</version>

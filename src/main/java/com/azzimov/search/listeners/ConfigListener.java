@@ -2,17 +2,22 @@ package com.azzimov.search.listeners;
 
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SystemConfiguration;
+import com.azzimov.search.common.util.config.types.AkkaActorSystemConfiguration;
 import com.azzimov.search.common.util.config.types.AnalyticsTypeConfiguration;
 import com.azzimov.search.common.util.config.types.AutocompleteTypeConfiguration;
 import com.azzimov.search.common.util.config.types.RecommendationTypeConfiguration;
 import com.azzimov.search.common.util.config.types.SearchTypeConfiguration;
 import com.azzimov.search.common.util.config.types.SystemTypeConfiguration;
 import com.azzimov.search.common.util.config.types.TaskTypeConfiguration;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValue;
 import org.apache.commons.lang3.StringUtils;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Component;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
-import javax.servlet.annotation.WebListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,18 +27,19 @@ import java.util.Map;
 
 /**
  * Created by RahulGupta on 2017-12-21.
+ * ConfigListener Reads the config files and load them
  */
-@WebListener
+@Component
 public class ConfigListener implements ServletContextListener {
-
     private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
-
+    private static final Logger logger = LogManager.getLogger(ConfigListener.class);
     private static final String SYSTEM_CONFIGURATION_PATH = "configurations/system.conf";
     private static final String SEARCH_CONFIGURATION_PATH = "configurations/search.conf";
     private static final String RECOMMENDATION_CONFIGURATION_PATH = "configurations/recommendation.conf";
     private static final String TASK_CONFIGURATION_PATH = "configurations/task.conf";
     private static final String AUTOCOMPLETE_CONFIGURATION_PATH = "configurations/autocomplete.conf";
     private static final String ANALYTICS_CONFIGURATION_PATH = "configurations/analytics.conf";
+    private static final String SYSTEM_AKKA_CONFIGURATION_PATH = "configurations/akka_configurations.conf";
 
     private Map<String, Object> analyticsConfigMap;
     private Map<String, Object> autocompleteConfigMap;
@@ -41,39 +47,42 @@ public class ConfigListener implements ServletContextListener {
     private Map<String, Object> searchConfigMap;
     private Map<String, Object> systemConfigMap;
     private Map<String, Object> taskConfigMap;
+    private Map<String, Object> systemAkkConfigMap;
 
     @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {
-        String clientName = null;
-        try{
+        String clientName;
+        try {
             analyticsConfigMap = new HashMap<>();
             autocompleteConfigMap = new HashMap<>();
             recommendationConfigMap = new HashMap<>();
             searchConfigMap = new HashMap<>();
             systemConfigMap = new HashMap<>();
             taskConfigMap = new HashMap<>();
+            systemAkkConfigMap = new HashMap<>();
 
             System.out.println("========= Config Listener has been started ===========");
 
             //read global configuration
-            readConfig(SEARCH_CONFIGURATION_PATH, searchConfigMap);
-            readConfig(SYSTEM_CONFIGURATION_PATH, systemConfigMap);
-            readConfig(RECOMMENDATION_CONFIGURATION_PATH, recommendationConfigMap);
-            readConfig(TASK_CONFIGURATION_PATH, taskConfigMap);
-            readConfig(AUTOCOMPLETE_CONFIGURATION_PATH, autocompleteConfigMap);
-            readConfig(ANALYTICS_CONFIGURATION_PATH, analyticsConfigMap);
+            readConfig(SEARCH_CONFIGURATION_PATH, searchConfigMap, true);
+            readConfig(SYSTEM_CONFIGURATION_PATH, systemConfigMap, true);
+            readConfig(RECOMMENDATION_CONFIGURATION_PATH, recommendationConfigMap, true);
+            readConfig(TASK_CONFIGURATION_PATH, taskConfigMap, true);
+            readConfig(AUTOCOMPLETE_CONFIGURATION_PATH, autocompleteConfigMap, true);
+            readConfig(ANALYTICS_CONFIGURATION_PATH, analyticsConfigMap, true);
+            readConfig(SYSTEM_AKKA_CONFIGURATION_PATH, systemAkkConfigMap, false);
 
             clientName = !systemConfigMap.containsKey(SystemConfiguration.CLIENT_NAME) ? null :
                     configurationHandler.getStringConfig(SystemConfiguration.CLIENT_NAME);
 
             //read client specific configuration
-            if(StringUtils.isNotBlank(clientName)){
-                readConfig(clientName + "/" + SEARCH_CONFIGURATION_PATH, searchConfigMap);
-                readConfig(clientName + "/" + SYSTEM_CONFIGURATION_PATH, systemConfigMap);
-                readConfig(clientName + "/" + RECOMMENDATION_CONFIGURATION_PATH, recommendationConfigMap);
-                readConfig(clientName + "/" + TASK_CONFIGURATION_PATH, taskConfigMap);
-                readConfig(clientName + "/" + AUTOCOMPLETE_CONFIGURATION_PATH, autocompleteConfigMap);
-                readConfig(clientName + "/" + ANALYTICS_CONFIGURATION_PATH, analyticsConfigMap);
+            if (StringUtils.isNotBlank(clientName)) {
+                readConfig(clientName + "/" + SEARCH_CONFIGURATION_PATH, searchConfigMap, true);
+                readConfig(clientName + "/" + SYSTEM_CONFIGURATION_PATH, systemConfigMap, true);
+                readConfig(clientName + "/" + RECOMMENDATION_CONFIGURATION_PATH, recommendationConfigMap, true);
+                readConfig(clientName + "/" + TASK_CONFIGURATION_PATH, taskConfigMap, true);
+                readConfig(clientName + "/" + AUTOCOMPLETE_CONFIGURATION_PATH, autocompleteConfigMap, true);
+                readConfig(clientName + "/" + ANALYTICS_CONFIGURATION_PATH, analyticsConfigMap, true);
             }
 
             AnalyticsTypeConfiguration analyticsTypeConfiguration = new AnalyticsTypeConfiguration(analyticsConfigMap);
@@ -93,54 +102,54 @@ public class ConfigListener implements ServletContextListener {
 
             TaskTypeConfiguration taskTypeConfiguration = new TaskTypeConfiguration(taskConfigMap);
             configurationHandler.setTaskTypeConfiguration(taskTypeConfiguration);
-        }
-        catch (Exception e){
+
+            AkkaActorSystemConfiguration akkaActorSystemConfiguration = new AkkaActorSystemConfiguration(systemAkkConfigMap);
+            configurationHandler.setAkkaActorSystemConfiguration(akkaActorSystemConfiguration);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
 
-    private void readConfig(String path, Map<String, Object> configMap){
+    private void readConfig(String path, Map<String, Object> configMap, boolean populateData) {
         InputStream inputStream = null;
         InputStreamReader inputStreamReader = null;
         BufferedReader bufferedReader = null;
-        String readLine = null;
-        try{
+        try {
             inputStream = this.getClass().getClassLoader().getResourceAsStream(path);
             inputStreamReader = new InputStreamReader(inputStream);
-            bufferedReader = new BufferedReader(inputStreamReader);
-            while ((readLine = bufferedReader.readLine()) != null){
-                String[] configs = readLine.split("=");
-                String configKey = configs[0].trim();
-                String configValue = configs[1].trim();
-                configMap.put(configKey, configValue);
+            if (populateData) {
+                bufferedReader = new BufferedReader(inputStreamReader);
+                Config config = ConfigFactory.parseReader(inputStreamReader);
+                for (Map.Entry<String, ConfigValue> entry : config.entrySet()) {
+                    configMap.put(entry.getKey(), entry.getValue().unwrapped());
+                }
+            } else {
+                Config config = ConfigFactory.parseReader(inputStreamReader);
+                String configKey = config.root().keySet().iterator().next();
+                configMap.put(configKey, config);
             }
-        }
-        catch (IOException ioException){
-
-        }
-        finally {
-            try{
-                if(bufferedReader != null){
+        } catch (Exception exception) {
+            logger.error("Error occurred while reading the configurations {}", exception);
+        } finally {
+            try {
+                if (bufferedReader != null) {
                     bufferedReader.close();
                 }
-
-                if(inputStreamReader != null){
+                if (inputStreamReader != null) {
                     inputStreamReader.close();
                 }
-
-                if(inputStream != null){
+                if (inputStream != null) {
                     inputStream.close();
                 }
+            } catch (IOException ioException) {
+                logger.error("Error occurred while reading the configurations {}", ioException);
             }
-            catch (IOException ioException){
-
-            }
-
-
         }
+    }
 
-
+    public ConfigurationHandler getConfigurationHandler() {
+        return configurationHandler;
     }
 
     @Override
