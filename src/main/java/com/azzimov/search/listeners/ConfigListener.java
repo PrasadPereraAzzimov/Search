@@ -22,7 +22,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -155,6 +157,39 @@ public class ConfigListener implements ServletContextListener {
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
         System.out.println("========= Config Listener has been destroyed ===========");
+    }
+
+    public static Map<String, String> retrieveTargetRepositoriesforDocuments(List<Object> targetRepositoryConfigs,
+                                                                             ConfigurationHandler configurationHandler) {
+        Map<String, String> targetRepositories = new HashMap<>();
+
+        for (Object object : targetRepositoryConfigs) {
+            Map<String, String> targetCongigs = (Map<String, String>) object;
+            targetRepositories.putAll(targetCongigs);
+        }
+        // Map index names from system configs to search configs
+        List<String> docRepositories = new ArrayList<>();
+        if (configurationHandler.getStringConfig(SystemConfiguration.ES_ECOM_INDEX) != null)
+            docRepositories.add(configurationHandler.getStringConfig(SystemConfiguration.ES_ECOM_INDEX));
+        if (configurationHandler.getStringConfig(SystemConfiguration.ES_DIGITAL_INDEX) != null)
+            docRepositories.add(configurationHandler.getStringConfig(SystemConfiguration.ES_DIGITAL_INDEX));
+        if (configurationHandler.getStringConfig(SystemConfiguration.ES_ASSOCIATION_INDEX) != null)
+            docRepositories.add(configurationHandler.getStringConfig(SystemConfiguration.ES_ASSOCIATION_INDEX));
+        if (configurationHandler.getStringConfig(SystemConfiguration.ES_AGGREGATED_FEEDBACK) != null)
+            docRepositories.add(configurationHandler.getStringConfig(SystemConfiguration.ES_AGGREGATED_FEEDBACK));
+        if (configurationHandler.getStringConfig(SystemConfiguration.ES_FEEDBACK_INDEX) != null)
+            docRepositories.add(configurationHandler.getStringConfig(SystemConfiguration.ES_FEEDBACK_INDEX));
+        if (configurationHandler.getStringConfig(SystemConfiguration.ES_SYNONYM_INDEX) != null)
+            docRepositories.add(configurationHandler.getStringConfig(SystemConfiguration.ES_SYNONYM_INDEX));
+        Map<String, String> targetRepositoriesFinal = new HashMap<>();
+        for (String repo : docRepositories) {
+            for (Map.Entry<String, String> entry : targetRepositories.entrySet()) {
+                if (repo.equals(entry.getValue()) || repo.startsWith(entry.getValue())) {
+                        targetRepositoriesFinal.put(entry.getKey(), repo);
+                }
+            }
+        }
+        return targetRepositoriesFinal;
     }
 }
 

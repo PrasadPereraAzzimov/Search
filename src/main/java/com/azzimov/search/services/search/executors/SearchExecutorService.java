@@ -1,4 +1,4 @@
-package com.azzimov.search.services;
+package com.azzimov.search.services.search.executors;
 
 import com.azzimov.search.common.elasticsearch.configurations.ElasticsearchConfiguration;
 import com.azzimov.search.common.elasticsearch.executors.ElasticsearchExecutorService;
@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import java.util.HashMap;

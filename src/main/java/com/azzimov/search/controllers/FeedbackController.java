@@ -3,6 +3,7 @@ package com.azzimov.search.controllers;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import com.azzimov.search.common.dto.internals.feedback.ProductFeedback;
+import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
 import com.azzimov.search.system.spring.AppConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,10 +29,12 @@ public class FeedbackController {
             consumes = "application/json",
             produces = "application/json")
     @ResponseBody
-    public ResponseEntity<?> persistProductFeedback(@RequestBody ProductFeedback productFeedback) throws Exception{
+    public ResponseEntity<?> persistProductFeedback(@RequestBody ProductFeedback productFeedback) throws Exception {
         ActorSelection selection = appConfiguration.actorSystem().actorSelection("/user/" + AppConfiguration.FEEDBACK_ACTOR);
         // Forward the recieved feedback to the feedback router actor
-        selection.tell(productFeedback, ActorRef.noSender());
+        AzzimovFeedbackPersistRequest azzimovFeedbackPersistRequest = new AzzimovFeedbackPersistRequest();
+        azzimovFeedbackPersistRequest.setFeedback(productFeedback);
+        selection.tell(azzimovFeedbackPersistRequest, ActorRef.noSender());
         return new ResponseEntity<>(HttpStatus.ACCEPTED);
     }
 

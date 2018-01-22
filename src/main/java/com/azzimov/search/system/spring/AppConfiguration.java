@@ -2,8 +2,9 @@ package com.azzimov.search.system.spring;
 
 import akka.actor.ActorSystem;
 import com.azzimov.search.listeners.ConfigListener;
-import com.azzimov.search.services.SearchExecutorService;
+import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.system.actors.FeedbackManagerActor;
+import com.azzimov.search.system.actors.SearchManagerActor;
 import com.typesafe.config.Config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -37,6 +38,7 @@ public class AppConfiguration {
      * System Actor identifiers
      */
     public static final String FEEDBACK_ACTOR = "router_feedback";
+    public static final String SEARCH_ACTOR = "router_search";
 
     @Bean
     public ActorSystem actorSystem() {
@@ -52,5 +54,10 @@ public class AppConfiguration {
     @Bean(name = FEEDBACK_ACTOR)
     public FeedbackManagerActor createFeedbackManagerActor(){
         return new FeedbackManagerActor(searchExecutorService);
+    }
+
+    @Bean(name = SEARCH_ACTOR)
+    public SearchManagerActor createSearchManagerActor(){
+        return new SearchManagerActor(searchExecutorService, configListener, this);
     }
 }

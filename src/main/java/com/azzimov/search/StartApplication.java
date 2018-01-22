@@ -3,6 +3,7 @@ package com.azzimov.search;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.routing.FromConfig;
+import akka.routing.RoundRobinPool;
 import com.azzimov.search.system.spring.AppConfiguration;
 import com.azzimov.search.system.spring.SpringExtensionIdProvider;
 import org.apache.logging.log4j.LogManager;
@@ -16,6 +17,7 @@ import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 import static com.azzimov.search.system.spring.AppConfiguration.FEEDBACK_ACTOR;
+import static com.azzimov.search.system.spring.AppConfiguration.SEARCH_ACTOR;
 
 /**
  * Created by RahulGupta on 2017-12-21.
@@ -43,12 +45,25 @@ public class StartApplication {
     public void init() {
         applicationActors = new HashMap<>();
         system = appConfiguration.actorSystem();
-        ActorRef routerFeedback =
+       /* ActorRef routerFeedback =
                 system.actorOf(FromConfig.getInstance().props(
                         SpringExtensionIdProvider.SPRING_EXTENSION_ID_PROVIDER.get(system)
                                 .props(FEEDBACK_ACTOR)), FEEDBACK_ACTOR);
+*/
+       ActorRef routerFeedback = system.actorOf(SpringExtensionIdProvider.SPRING_EXTENSION_ID_PROVIDER.get(system)
+                .props(FEEDBACK_ACTOR), FEEDBACK_ACTOR);
         logger.info("Initializing the feedback manager router = {}", routerFeedback);
         applicationActors.put(FEEDBACK_ACTOR, routerFeedback);
+       /* ActorRef routerSearch =
+                system.actorOf(FromConfig.getInstance().props(
+                        SpringExtensionIdProvider.SPRING_EXTENSION_ID_PROVIDER.get(system)
+                                .props(SEARCH_ACTOR)), SEARCH_ACTOR);
+
+
+  */     ActorRef routerSearch = system.actorOf(SpringExtensionIdProvider.SPRING_EXTENSION_ID_PROVIDER.get(system)
+                .props(SEARCH_ACTOR), SEARCH_ACTOR);
+        logger.info("Initializing the search manager router = {}", routerSearch);
+        applicationActors.put(SEARCH_ACTOR, routerSearch);
     }
 
     @Autowired
