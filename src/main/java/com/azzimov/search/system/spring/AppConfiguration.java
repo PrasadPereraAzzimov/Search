@@ -60,4 +60,14 @@ public class AppConfiguration {
     public SearchManagerActor createSearchManagerActor(){
         return new SearchManagerActor(searchExecutorService, configListener, this);
     }
+
+    @Bean(name = "CONFIG_LISTENER")
+    public ConfigListener configListener(){
+        return new ConfigListener();
+    }
+
+    @Bean(name = "SEARCH_EXECUTOR_SERVICE")
+    public SearchExecutorService searchExecutorService(){
+        return new SearchExecutorService(configListener);
+    }
 }

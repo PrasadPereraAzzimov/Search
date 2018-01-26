@@ -18,6 +18,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import javax.servlet.annotation.WebListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +32,7 @@ import java.util.Map;
  * Created by RahulGupta on 2017-12-21.
  * ConfigListener Reads the config files and load them
  */
-@Component
+@WebListener
 public class ConfigListener implements ServletContextListener {
     private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
     private static final Logger logger = LogManager.getLogger(ConfigListener.class);
