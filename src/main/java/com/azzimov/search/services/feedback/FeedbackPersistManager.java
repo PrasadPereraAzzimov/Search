@@ -1,10 +1,20 @@
 package com.azzimov.search.services.feedback;
 
-import com.azzimov.search.common.dto.ExtendedLanguage;
+import com.azzimov.search.common.dto.Language;
+import com.azzimov.search.common.dto.communications.requests.AzzimovRequestFilter;
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
+import com.azzimov.search.common.dto.externals.AzzimovRequestRefinement;
 import com.azzimov.search.common.dto.internals.feedback.Feedback;
+import com.azzimov.search.common.dto.internals.feedback.FeedbackAttribute;
+import com.azzimov.search.common.dto.internals.feedback.FeedbackAttributeLabel;
+import com.azzimov.search.common.dto.internals.feedback.FeedbackAttributeNumericValue;
+import com.azzimov.search.common.dto.internals.feedback.FeedbackAttributeStringValue;
+import com.azzimov.search.common.dto.internals.feedback.FeedbackCategory;
+import com.azzimov.search.common.dto.internals.feedback.FeedbackCategoryLabel;
 import com.azzimov.search.common.dto.internals.feedback.FeedbackType;
+import com.azzimov.search.common.dto.internals.feedback.GuidanceAttributeEntry;
+import com.azzimov.search.common.dto.internals.feedback.GuidanceCategoryEntry;
 import com.azzimov.search.common.dto.internals.feedback.GuidanceFeedback;
 import com.azzimov.search.common.dto.internals.feedback.ProductFeedback;
 import com.azzimov.search.common.dto.internals.feedback.ProductResult;
@@ -18,12 +28,10 @@ import com.azzimov.search.common.responses.AzzimovSourceResponse;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
-import org.antlr.v4.runtime.misc.Array2DHashSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -66,20 +74,72 @@ public class FeedbackPersistManager {
                 azzimovSearchResponse.getAzzimovSearchInfo().getCount(),
                 productResultList,
                 null);
-        Feedback.FeedbackBuilder feedbackBuilder = new Feedback.FeedbackBuilder(
-                FeedbackType.QUERY)
-                .setDevice(azzimovSearchRequest.getAzzimovUserRequestParameters().getBrowserDevice())
-                .setInteractionTime(DateTime.now(DateTimeZone.UTC))
-                .setIp(azzimovSearchRequest.getAzzimovUserRequestParameters().getMemberIp())
-                .setLanguage(new ExtendedLanguage(azzimovSearchRequest.getAzzimovSearchRequestParameters()
-                        .getLanguage().getLanguageCode()))
-                .setMemberId(azzimovSearchRequest.getAzzimovUserRequestParameters().getMemberId())
-                .setQuery(azzimovSearchRequest.getAzzimovSearchRequestParameters().getQuery())
-                .setRequestId(azzimovSearchRequest.getAzzimovUserRequestParameters().getRequestId())
-                .setSessionId(azzimovSearchRequest.getAzzimovUserRequestParameters().getSessionId())
-                .setQueryHitCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount())
-                .setQuerySearchResult(querySearchResult);
-        Feedback feedback = feedbackBuilder.build();
+        Feedback feedback;
+        if ((azzimovSearchRequest.getAzzimovSearchRequestParameters().getAzzimovRequestFilters() != null &&
+                !azzimovSearchRequest.getAzzimovSearchRequestParameters().getAzzimovRequestFilters().isEmpty())
+                ||
+                (azzimovSearchRequest.getAzzimovSearchRequestParameters().getAzzimovRequestRefinement() != null)) {
+            List<AzzimovRequestFilter> azzimovRequestFilterList = azzimovSearchRequest.
+                    getAzzimovSearchRequestParameters().getAzzimovRequestFilters();
+            List<GuidanceAttributeEntry> guidanceAttributeEntryList = new ArrayList<>();
+            if (azzimovRequestFilterList!= null && !azzimovRequestFilterList.isEmpty()) {
+                for (AzzimovRequestFilter azzimovRequestFilter : azzimovRequestFilterList) {
+                    FeedbackAttributeLabel attributeLabel = new FeedbackAttributeLabel(azzimovRequestFilter.getLabel());
+                    FeedbackAttribute feedbackAttribute = new FeedbackAttribute(attributeLabel, 0);
+                    if (azzimovRequestFilter.getFilterType().equals("text")) {
+                        FeedbackAttributeStringValue feedbackAttributeStringValue =
+                                new FeedbackAttributeStringValue(azzimovRequestFilter.getValue());
+                        feedbackAttribute.setFeedbackAttributeStringValue(feedbackAttributeStringValue);
+                    } else {
+                        FeedbackAttributeNumericValue feedbackAttributeNumericValue =
+                                new FeedbackAttributeNumericValue(Double.parseDouble(azzimovRequestFilter.getValue()));
+                        feedbackAttribute.setFeedbackAttributeNumericValue(feedbackAttributeNumericValue);
+                    }
+                    GuidanceAttributeEntry guidanceAttributeEntry = new GuidanceAttributeEntry(feedbackAttribute, 0);
+                    guidanceAttributeEntryList.add(guidanceAttributeEntry);
+                }
+            }
+            List<GuidanceCategoryEntry> guidanceCategoryEntryList = new ArrayList<>();
+            AzzimovRequestRefinement azzimovRequestRefinement = azzimovSearchRequest.
+                    getAzzimovSearchRequestParameters().getAzzimovRequestRefinement();
+            if (azzimovRequestRefinement != null) {
+                FeedbackCategoryLabel feedbackCategoryValue = new FeedbackCategoryLabel(azzimovRequestRefinement.getValue());
+                FeedbackCategory feedbackCategory = new FeedbackCategory(feedbackCategoryValue, 0, 0);
+                GuidanceCategoryEntry guidanceCategoryEntry = new GuidanceCategoryEntry(feedbackCategory, 0);
+                guidanceCategoryEntryList.add(guidanceCategoryEntry);
+            }
+            Feedback.FeedbackBuilder feedbackBuilder = new Feedback.FeedbackBuilder(
+                    FeedbackType.GUIDANCE)
+                    .setDevice(azzimovSearchRequest.getAzzimovUserRequestParameters().getBrowserDevice())
+                    .setInteractionTime(DateTime.now(DateTimeZone.UTC))
+                    .setIp(azzimovSearchRequest.getAzzimovUserRequestParameters().getMemberIp())
+                    .setLanguage(new Language(azzimovSearchRequest.getAzzimovSearchRequestParameters()
+                            .getLanguage().getLanguageCode()))
+                    .setMemberId(azzimovSearchRequest.getAzzimovUserRequestParameters().getMemberId())
+                    .setQuery(azzimovSearchRequest.getAzzimovSearchRequestParameters().getQuery())
+                    .setRequestId(azzimovSearchRequest.getAzzimovUserRequestParameters().getRequestId())
+                    .setSessionId(azzimovSearchRequest.getAzzimovUserRequestParameters().getSessionId())
+                    .setQueryHitCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount())
+                    .setGuidanceAttributeEntry(guidanceAttributeEntryList)
+                    .setGuidanceCategoryEntry(guidanceCategoryEntryList)
+                    .setQuerySearchResult(querySearchResult);
+            feedback = feedbackBuilder.build();
+        } else {
+            Feedback.FeedbackBuilder feedbackBuilder = new Feedback.FeedbackBuilder(
+                    FeedbackType.QUERY)
+                    .setDevice(azzimovSearchRequest.getAzzimovUserRequestParameters().getBrowserDevice())
+                    .setInteractionTime(DateTime.now(DateTimeZone.UTC))
+                    .setIp(azzimovSearchRequest.getAzzimovUserRequestParameters().getMemberIp())
+                    .setLanguage(new Language(azzimovSearchRequest.getAzzimovSearchRequestParameters()
+                            .getLanguage().getLanguageCode()))
+                    .setMemberId(azzimovSearchRequest.getAzzimovUserRequestParameters().getMemberId())
+                    .setQuery(azzimovSearchRequest.getAzzimovSearchRequestParameters().getQuery())
+                    .setRequestId(azzimovSearchRequest.getAzzimovUserRequestParameters().getRequestId())
+                    .setSessionId(azzimovSearchRequest.getAzzimovUserRequestParameters().getSessionId())
+                    .setQueryHitCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount())
+                    .setQuerySearchResult(querySearchResult);
+            feedback = feedbackBuilder.build();
+        }
         persistFeedback(feedback);
         return true;
     }
@@ -88,7 +148,7 @@ public class FeedbackPersistManager {
         private SearchExecutorService searchExecutorService;
         private ConfigurationHandler configurationHandler;
 
-        public FeedbackPersistVisitor(SearchExecutorService searchExecutorService,
+        FeedbackPersistVisitor(SearchExecutorService searchExecutorService,
                                       ConfigurationHandler configurationHandler) {
             this.searchExecutorService = searchExecutorService;
             this.configurationHandler = configurationHandler;
@@ -105,7 +165,8 @@ public class FeedbackPersistManager {
             documentTypes.add(FeedbackType.QUERY.toString());
             List<Object> targetRepositoriesConfigs = configurationHandler
                     .getObjectConfigList("feedback.document.target.indexes");
-            Map<String, String> targetRepositories = ConfigListener.retrieveTargetRepositoriesforDocuments(targetRepositoriesConfigs,
+            Map<String, String> targetRepositories = ConfigListener.retrieveTargetRepositoriesforDocuments(
+                    targetRepositoriesConfigs,
                     configurationHandler);
             // the target repository/index
             String targetRepository = targetRepositories.values().iterator().next();
@@ -121,7 +182,8 @@ public class FeedbackPersistManager {
             AzzimovIndexPersistRequest<ProductFeedback> azzimovIndexPersistRequest =
                     new AzzimovIndexPersistRequest<>();
             Map<String, ProductFeedback> productFeedbackMap = new HashMap<>();
-            productFeedbackMap.put("" + productFeedback.getOriginalProductId(), productFeedback);
+            productFeedback.setInteractionTime(DateTime.now(DateTimeZone.UTC));
+            productFeedbackMap.put("" + productFeedback.getOriginalProductId() + DateTime.now(), productFeedback);
             azzimovIndexPersistRequest.setSource(productFeedbackMap);
             List<String> documentTypes = new ArrayList<>();
             documentTypes.add(FeedbackType.PRODUCT.toString());
@@ -140,7 +202,26 @@ public class FeedbackPersistManager {
 
         @Override
         public Boolean visit(GuidanceFeedback guidanceFeedback) throws Exception {
-            return null;
+            AzzimovIndexPersistRequest<GuidanceFeedback> azzimovIndexPersistRequest =
+                    new AzzimovIndexPersistRequest<>();
+            Map<String, GuidanceFeedback> productFeedbackMap = new HashMap<>();
+            productFeedbackMap.put("" + DateTime.now(DateTimeZone.UTC), guidanceFeedback);
+            azzimovIndexPersistRequest.setSource(productFeedbackMap);
+            List<String> documentTypes = new ArrayList<>();
+            documentTypes.add(FeedbackType.GUIDANCE.toString());
+            List<Object> targetRepositoriesConfigs = configurationHandler
+                    .getObjectConfigList("feedback.document.target.indexes");
+            Map<String, String> targetRepositories = ConfigListener.retrieveTargetRepositoriesforDocuments(
+                    targetRepositoriesConfigs,
+                    configurationHandler);
+            // the target repository/index
+            String targetRepository = targetRepositories.values().iterator().next();
+            azzimovIndexPersistRequest.setAzzimovQuery(new AzzimovMatchAllQuery(targetRepository, documentTypes));
+            AzzimovSourceResponse<AzzimovIndexResponse> azzimovSourceResponse =
+                    searchExecutorService.getExecutorService().performPersistRequest(azzimovIndexPersistRequest);
+            logger.info("Persisted document = {}", azzimovSourceResponse.getObjectType().get(0).getStatus());
+            return true;
+
         }
     }
 }

@@ -10,12 +10,13 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+import static com.azzimov.search.system.spring.AppConfiguration.FEEDBACK_ACTOR;
 
 /**
  * Created by prasad on 1/4/18.
  * FeedbackManager Actor is responsible of persisting feedbacks in our Azzimov Search
  */
-@Component
+@Component(value = FEEDBACK_ACTOR)
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class FeedbackManagerActor extends AbstractActor {
     private static final Logger logger = LogManager.getLogger(FeedbackManagerActor.class);

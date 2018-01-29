@@ -8,16 +8,19 @@ import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearc
 import com.azzimov.search.common.query.AzzimovBooleanQuery;
 import com.azzimov.search.common.query.AzzimovFunctionScoreQuery;
 import com.azzimov.search.common.responses.AzzimovSearchResponse;
+import com.azzimov.search.common.sorters.AzzimovSorter;
 import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.aggregators.AzzimovProductSearchAggregatorCreator;
 import com.azzimov.search.services.search.filters.AzzimovProductSearchAttributeFilterCreator;
+import com.azzimov.search.services.search.filters.AzzimovProductSearchRefinementFilterCreator;
 import com.azzimov.search.services.search.params.AzzimovSearchParameters;
 import com.azzimov.search.services.search.queries.AzzimovProductSearchExactQueryCreator;
 import com.azzimov.search.services.search.queries.AzzimovProductSearchQueryCreator;
 import com.azzimov.search.services.search.queries.AzzimovSearchScoreAssimilatorCreator;
 import com.azzimov.search.services.search.reponses.AzzimovSearchResponseBuilder;
+import com.azzimov.search.services.search.sorters.AzzimovProductSearchSorterCreator;
 import com.azzimov.search.services.search.validators.AzzimovSearchRequestValidator;
 import com.azzimov.search.system.spring.AppConfiguration;
 import org.apache.logging.log4j.LogManager;
@@ -25,17 +28,18 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
 import java.util.List;
+import static com.azzimov.search.system.spring.AppConfiguration.SEARCH_ACTOR;
 
 
 /**
  * Created by prasad on 1/4/18.
  * SearchManagerActor Actor is responsible of handling search requests in Azzimov Search
  */
-@Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+@Component(value = SEARCH_ACTOR)
 public class SearchManagerActor extends AbstractActor {
     private static final Logger logger = LogManager.getLogger(SearchManagerActor.class);
     private SearchExecutorService searchExecutorService;
@@ -79,6 +83,10 @@ public class SearchManagerActor extends AbstractActor {
                                 new AzzimovProductSearchAttributeFilterCreator(configListener.getConfigurationHandler());
                         azzimovBooleanQuery = azzimovProductSearchFilterCreator
                                 .createAzzimovQuery(azzimovSearchParameters, azzimovBooleanQuery);
+                        AzzimovProductSearchRefinementFilterCreator productSearchRefinementFilterCreator =
+                                new AzzimovProductSearchRefinementFilterCreator(configListener.getConfigurationHandler());
+                        azzimovBooleanQuery = productSearchRefinementFilterCreator.createAzzimovQuery(azzimovSearchParameters,
+                                azzimovBooleanQuery);
                         AzzimovProductSearchExactQueryCreator azzimovProductSearchExactQueryCreator =
                                 new AzzimovProductSearchExactQueryCreator(configListener.getConfigurationHandler());
                         AzzimovFunctionScoreQuery azzimovFunctionScoreQuery =
@@ -89,6 +97,13 @@ public class SearchManagerActor extends AbstractActor {
                         azzimovFunctionScoreQuery = azzimovSearchScoreAssimilatorCreator
                                 .createAzzimovQuery(azzimovSearchParameters, azzimovFunctionScoreQuery);
                         searchRequest.setAzzimovQuery(azzimovFunctionScoreQuery);
+
+                        AzzimovProductSearchSorterCreator azzimovProductSearchSorterCreator =
+                                new AzzimovProductSearchSorterCreator(configListener.getConfigurationHandler());
+                        List<AzzimovSorter> azzimovSorterList = new ArrayList<>();
+                        azzimovSorterList = azzimovProductSearchSorterCreator
+                                .createAzzimovQuery(azzimovSearchParameters, azzimovSorterList);
+                        searchRequest.setAzzimovSorter(azzimovSorterList);
 
                         AzzimovProductSearchAggregatorCreator azzimovProductSearchAggregatorCreator =
                                 new AzzimovProductSearchAggregatorCreator();

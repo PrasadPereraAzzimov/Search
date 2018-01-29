@@ -3,8 +3,6 @@ package com.azzimov.search.system.spring;
 import akka.actor.ActorSystem;
 import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
-import com.azzimov.search.system.actors.FeedbackManagerActor;
-import com.azzimov.search.system.actors.SearchManagerActor;
 import com.typesafe.config.Config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -49,15 +47,5 @@ public class AppConfiguration {
                 (Config) configurations);
         SpringExtensionIdProvider.SPRING_EXTENSION_ID_PROVIDER.get(system).initialize(applicationContext);
         return system;
-    }
-
-    @Bean(name = FEEDBACK_ACTOR)
-    public FeedbackManagerActor createFeedbackManagerActor(){
-        return new FeedbackManagerActor(searchExecutorService);
-    }
-
-    @Bean(name = SEARCH_ACTOR)
-    public SearchManagerActor createSearchManagerActor(){
-        return new SearchManagerActor(searchExecutorService, configListener, this);
     }
 }
