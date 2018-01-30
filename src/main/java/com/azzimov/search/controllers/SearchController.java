@@ -1,11 +1,9 @@
 package com.azzimov.search.controllers;
 
-import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.pattern.PatternsCS;
 import akka.util.Timeout;
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
-import com.azzimov.search.common.responses.AzzimovSearchResponse;
 import com.azzimov.search.system.spring.AppConfiguration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
@@ -21,8 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Created by prasad on 1/9/18.

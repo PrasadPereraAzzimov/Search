@@ -39,32 +39,43 @@ public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
     @Override
     public AzzimovSearchResponse search(AzzimovSearchParameters azzimovSearchParameters)
             throws IllegalAccessException, IOException, InstantiationException {
+        // Create the main/core query of the search first
         AzzimovProductSearchQueryCreator azzimovProductSearchQueryCreator =
                 new AzzimovProductSearchQueryCreator(configurationHandler);
         AzzimovBooleanQuery azzimovBooleanQuery =
                 azzimovProductSearchQueryCreator.createAzzimovQuery(azzimovSearchParameters, null);
+
         com.azzimov.search.common.requests.AzzimovSearchRequest searchRequest =
                 new com.azzimov.search.common.requests.AzzimovSearchRequest();
 
+        // Create attribute related filters on the search if the parameters contain attribute filters
         AzzimovProductSearchAttributeFilterCreator azzimovProductSearchFilterCreator =
                 new AzzimovProductSearchAttributeFilterCreator(configurationHandler);
         azzimovBooleanQuery = azzimovProductSearchFilterCreator
                 .createAzzimovQuery(azzimovSearchParameters, azzimovBooleanQuery);
+
+        // Create category/refinement related filters on the search if the parameters contain attribute filters
         AzzimovProductSearchRefinementFilterCreator productSearchRefinementFilterCreator =
                 new AzzimovProductSearchRefinementFilterCreator(configurationHandler);
         azzimovBooleanQuery = productSearchRefinementFilterCreator.createAzzimovQuery(azzimovSearchParameters,
                 azzimovBooleanQuery);
+
+        // Create exact query scoring query that boost exact query matches of the query terms
         AzzimovProductSearchExactQueryCreator azzimovProductSearchExactQueryCreator =
                 new AzzimovProductSearchExactQueryCreator(configurationHandler);
         AzzimovFunctionScoreQuery azzimovFunctionScoreQuery =
                 azzimovProductSearchExactQueryCreator
                         .createAzzimovQuery(azzimovSearchParameters, azzimovBooleanQuery);
-        AzzimovProductSearchScoreQueryCreator azzimovSearchScoreAssimilatorCreator =
+
+        // Create score query that normalize the query score for proper relevance we need in query equation
+        AzzimovProductSearchScoreQueryCreator azzimovProductSearchScoreQueryCreator =
                 new AzzimovProductSearchScoreQueryCreator(configurationHandler);
-        azzimovFunctionScoreQuery = azzimovSearchScoreAssimilatorCreator
+        azzimovFunctionScoreQuery = azzimovProductSearchScoreQueryCreator
                 .createAzzimovQuery(azzimovSearchParameters, azzimovFunctionScoreQuery);
         searchRequest.setAzzimovQuery(azzimovFunctionScoreQuery);
 
+        // Create custom query sorters that sort the search results if the sorting is specified in search request
+        // parameters
         AzzimovProductSearchSorterCreator azzimovProductSearchSorterCreator =
                 new AzzimovProductSearchSorterCreator(configurationHandler);
         List<AzzimovSorter> azzimovSorterList = new ArrayList<>();
@@ -72,14 +83,18 @@ public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
                 .createAzzimovQuery(azzimovSearchParameters, azzimovSorterList);
         searchRequest.setAzzimovSorter(azzimovSorterList);
 
+        // For now, this is here but will be moved to guidance manager task
         AzzimovProductSearchAggregatorCreator azzimovProductSearchAggregatorCreator =
                 new AzzimovProductSearchAggregatorCreator(configurationHandler);
         List<AzzimovAggregator> termAggregatorList = azzimovProductSearchAggregatorCreator
                 .createAzzimovQuery(azzimovSearchParameters, null);
         searchRequest.setAzzimovAggregator(termAggregatorList);
 
+        // Execute the query and retrieve results
         com.azzimov.search.common.responses.AzzimovSearchResponse azzimovSearchResponse = searchExecutorService
                 .getExecutorService().performSearchRequest(searchRequest);
+
+        // Build the Azzimvo Search response and return it
         AzzimovSearchResponseBuilder azzimovSearchResponseBuilder = new AzzimovSearchResponseBuilder(
                 azzimovSearchResponse,
                 searchRequest);
