@@ -1,4 +1,4 @@
-package com.azzimov.search.services.search.filters;
+package com.azzimov.search.services.search.filters.product;
 
 import com.azzimov.search.common.dto.LanguageCode;
 import com.azzimov.search.common.dto.externals.AzzimovRequestRefinement;
@@ -7,12 +7,14 @@ import com.azzimov.search.common.dto.externals.Product;
 import com.azzimov.search.common.query.AzzimovBooleanQuery;
 import com.azzimov.search.common.query.AzzimovTermTermQuery;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
-import com.azzimov.search.services.search.params.AzzimovSearchParameters;
+import com.azzimov.search.services.search.filters.AzzimovFilterCreator;
+import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import static com.azzimov.search.services.search.queries.AzzimovProductSearchExactQueryCreator.EXACT_FIELD_RAW;
-import static com.azzimov.search.services.search.queries.AzzimovQueryCreator.retrieveFieldPath;
+
+import static com.azzimov.search.services.search.utils.SearchFieldConstants.EXACT_FIELD_RAW;
+import static com.azzimov.search.services.search.utils.SearchFieldConstants.retrieveFieldPath;
 
 /**
  * Created by prasad on 1/25/18.
@@ -34,13 +36,12 @@ public class AzzimovProductSearchRefinementFilterCreator  extends AzzimovFilterC
         // product documents
         // For the Azzimov Product Search query creator, we will not consider the input query azzimov query as this
         // is the base/core of product query
-        String query = azzimovParameters.getAzzimovSearchRequest().
-                getAzzimovSearchRequestParameters().getQuery();
         Map<String, String> targetDocumentTypes = azzimovParameters.getTargetRepositories();
         // Here, for now, we expect one time of targets
-        List<String> targetDocs = new ArrayList<>(targetDocumentTypes.keySet());
+        List<String> targetDocs = new ArrayList<>();
+        targetDocs.add(Product.PRODUCT_EXTERNAL_NAME);
         // the target repository/index
-        String targetRepository = targetDocumentTypes.values().iterator().next();
+        String targetRepository = targetDocumentTypes.get(Product.PRODUCT_EXTERNAL_NAME);
         // Retrieve the language field for the query language
         LanguageCode languageCode = azzimovParameters.getAzzimovSearchRequest()
                 .getAzzimovSearchRequestParameters().getLanguage().getLanguageCode();

@@ -1,4 +1,4 @@
-package com.azzimov.search.services.search.queries;
+package com.azzimov.search.services.search.queries.product;
 
 import com.azzimov.search.common.dto.LanguageCode;
 import com.azzimov.search.common.dto.externals.Attribute;
@@ -13,7 +13,8 @@ import com.azzimov.search.common.text.AzzimovTextProcessor;
 import com.azzimov.search.common.text.AzzimovTextQuery;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SearchConfiguration;
-import com.azzimov.search.services.search.params.AzzimovSearchParameters;
+import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
+import com.azzimov.search.services.search.queries.AzzimovQueryCreator;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -23,6 +24,8 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.azzimov.search.common.query.AzzimovFilterFunctionQuery.AzzimovScoreFunctionConstant.WEIGHTFACTORFUNCTION;
+import static com.azzimov.search.services.search.utils.SearchFieldConstants.EXACT_FIELD;
+import static com.azzimov.search.services.search.utils.SearchFieldConstants.retrieveFieldPath;
 
 /**
  * Created by prasad on 1/12/18.
@@ -31,9 +34,8 @@ import static com.azzimov.search.common.query.AzzimovFilterFunctionQuery.Azzimov
 public class AzzimovProductSearchExactQueryCreator extends AzzimovQueryCreator<AzzimovSearchParameters,
         AzzimovQuery, AzzimovFunctionScoreQuery> {
     private ConfigurationHandler configurationHandler;
-    // for now, this will be here, in future it should be within the dto libs
-    public static final String EXACT_FIELD = "raw_lower";
-    public static final String EXACT_FIELD_RAW = "raw";
+    private static final int MAX_N_GRAM_LIMIT = 5;
+    private static final int MIN_N_GRAM_LIMIT = 5;
 
     public AzzimovProductSearchExactQueryCreator(ConfigurationHandler configurationHandler) {
         this.configurationHandler = configurationHandler;
@@ -43,8 +45,6 @@ public class AzzimovProductSearchExactQueryCreator extends AzzimovQueryCreator<A
     public AzzimovFunctionScoreQuery createAzzimovQuery(AzzimovSearchParameters azzimovParameters, AzzimovQuery azzimovQuery) {
         List<Object> configList = configurationHandler.getObjectConfigList(SearchConfiguration.QUERY_BOOST_VALUES);
         Map<String, Integer> searchFieldBoosts = (Map<String, Integer>) configList.get(0);
-        configList = configurationHandler.getObjectConfigList(SearchConfiguration.QUERY_MINIMUM_SHOULD_MATCH);
-        Map<String, Integer> minimumFieldMatch = (Map<String, Integer>) configList.get(0);
         // In this case, we will build an azzimov query based on our search parameter query terms
         // The field specific query we build here is a concrete implementation of our product search keyword query for
         // product documents
@@ -62,16 +62,17 @@ public class AzzimovProductSearchExactQueryCreator extends AzzimovQueryCreator<A
             azzimovTextQueries  = azzimovTextProcessor.retrieveNGramQueries(query,
                     locale,
                     new ArrayList<>(),
-                    2,
-                    5);
+                    MIN_N_GRAM_LIMIT,
+                    MAX_N_GRAM_LIMIT);
         } catch (IOException e) {
             e.printStackTrace();
         }
         Map<String, String> targetDocumentTypes = azzimovParameters.getTargetRepositories();
         // Here, for now, we expect one time of targets
-        List<String> targetDocs = new ArrayList<>(targetDocumentTypes.keySet());
+        List<String> targetDocs = new ArrayList<>();
+        targetDocs.add(Product.PRODUCT_EXTERNAL_NAME);
         // the target repository/index
-        String targetRepository = targetDocumentTypes.values().iterator().next();
+        String targetRepository = targetDocumentTypes.get(Product.PRODUCT_EXTERNAL_NAME);
         // Retrieve the language field for the query language
         LanguageCode languageCode = azzimovParameters.getAzzimovSearchRequest()
                 .getAzzimovSearchRequestParameters().getLanguage().getLanguageCode();

@@ -19,8 +19,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALUE_TEXT;
+
 /**
  * Created by prasad on 1/17/18.
+ * AzzimovSearchResponseBuilder builds a search response to be replied with
  */
 public class AzzimovSearchResponseBuilder {
     private AzzimovSearchResponse azzimovSearchResponse;
@@ -125,9 +128,9 @@ public class AzzimovSearchResponseBuilder {
                 guidanceFiltersMap.put(attributeLabelValuePair[0].trim(), guidanceFilter);
                 if (attributeLabelValuePair.length > 2) {
                     // This means this a numeric field
-                    guidanceFilter.setFilterType("numeric/range");
+                    guidanceFilter.setFilterType(attributeLabelValuePair[2]);
                 } else {
-                    guidanceFilter.setFilterType("text");
+                    guidanceFilter.setFilterType(VALUE_TEXT);
                 }
             }
         }

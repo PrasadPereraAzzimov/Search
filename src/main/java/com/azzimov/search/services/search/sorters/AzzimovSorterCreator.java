@@ -11,5 +11,5 @@ import java.util.List;
  */
 public abstract class AzzimovSorterCreator <Parameters extends AzzimovParameters,
         SorterI extends AzzimovSorter, SorterO extends AzzimovSorter> {
-    abstract List<SorterO> createAzzimovQuery(Parameters azzimovParameters, List<SorterI> sorterIList);
+    public abstract List<SorterO> createAzzimovQuery(Parameters azzimovParameters, List<SorterI> sorterIList);
 }

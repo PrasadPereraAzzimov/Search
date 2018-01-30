@@ -1,4 +1,4 @@
-package com.azzimov.search.services.search.validators;
+package com.azzimov.search.services.search.validators.product;
 
 import com.azzimov.search.common.dto.communications.requests.AzzimovUserRequestParameters;
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
@@ -6,7 +6,8 @@ import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearc
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SearchConfiguration;
 import com.azzimov.search.listeners.ConfigListener;
-import com.azzimov.search.services.search.params.AzzimovSearchParameters;
+import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
+import com.azzimov.search.services.search.validators.AzzimovRequestValidator;
 import java.security.InvalidParameterException;
 import java.util.HashMap;
 import java.util.List;
@@ -30,8 +31,9 @@ public class AzzimovSearchRequestValidator implements
         List<String> documents = configurationHandler.getStringConfigList(SearchConfiguration.SEARCH_DOCUMENT_TYPE);
         List<Object> targetRepositoriesConfigs = configurationHandler
                 .getObjectConfigList(SearchConfiguration.SEARCH_DOC_TARGET_INDEXES);
-        Map<String, String> targetRepositories = ConfigListener.retrieveTargetRepositoriesforDocuments(targetRepositoriesConfigs,
+        Map<String, String> repositories = ConfigListener.retrieveTargetRepositoriesforDocuments(targetRepositoriesConfigs,
                 configurationHandler);
+        Map<String, String> targetRepositories = new HashMap<>();
         // check if the request contains required/must parameters
         if (azzimovSearchRequest.getAzzimovUserRequestParameters() != null) {
             AzzimovUserRequestParameters azzimovUserRequestParameters =
@@ -65,7 +67,7 @@ public class AzzimovSearchRequestValidator implements
                     !languages.contains(azzimovSearchRequestParameters.getLanguage().getLanguageCode().getValue()))
                 throw new InvalidParameterException("Invalid request parameter:" + "language");
             if (azzimovSearchRequestParameters.getDocumentTypes() == null ||
-                    documents.containsAll(azzimovSearchRequestParameters.getDocumentTypes()))
+                    !documents.containsAll(azzimovSearchRequestParameters.getDocumentTypes()))
                 throw new InvalidParameterException("Invalid request parameter:" + "types");
         } else {
             throw new InvalidParameterException("Missing required request field:" + "search_parameters");
@@ -73,6 +75,10 @@ public class AzzimovSearchRequestValidator implements
         // If we reach here, that means parameters are validated!
         AzzimovSearchParameters azzimovSearchParameters = new AzzimovSearchParameters();
         azzimovSearchParameters.setAzzimovSearchRequest(azzimovSearchRequest);
+        // Add repositories targetted by query to search query request
+        for (String documentType : azzimovSearchRequest.getAzzimovSearchRequestParameters().getDocumentTypes()) {
+            targetRepositories.put(documentType, repositories.get(documentType));
+        }
         azzimovSearchParameters.setTargetRepositories(targetRepositories);
         return azzimovSearchParameters;
     }

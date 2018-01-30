@@ -1,4 +1,4 @@
-package com.azzimov.search.services.search.queries;
+package com.azzimov.search.services.search.queries.product;
 
 import com.azzimov.search.common.dto.Language;
 import com.azzimov.search.common.dto.LanguageCode;
@@ -14,7 +14,8 @@ import com.azzimov.search.common.text.AzzimovTextProcessor;
 import com.azzimov.search.common.text.AzzimovTextQuery;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SearchConfiguration;
-import com.azzimov.search.services.search.params.AzzimovSearchParameters;
+import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
+import com.azzimov.search.services.search.queries.AzzimovQueryCreator;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.fr.FrenchAnalyzer;
 import java.io.IOException;
@@ -24,6 +25,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+
+import static com.azzimov.search.services.search.utils.SearchFieldConstants.retrieveFieldPath;
 
 /**
  * Created by prasad on 1/11/18.
@@ -59,7 +62,7 @@ public class AzzimovProductSearchQueryCreator extends AzzimovQueryCreator<Azzimo
         LanguageCode languageCode = azzimovParameters.getAzzimovSearchRequest()
                 .getAzzimovSearchRequestParameters().getLanguage().getLanguageCode();
 
-        // Retrieve normaized query
+        // Retrieve normalized query
         AzzimovTextQuery azzimovTextQuery;
         String normalizedQuery = query;
         AzzimovTextProcessor azzimovTextProcessor = new AzzimovTextProcessor();
@@ -73,9 +76,10 @@ public class AzzimovProductSearchQueryCreator extends AzzimovQueryCreator<Azzimo
         }
         Map<String, String> targetDocumentTypes = azzimovParameters.getTargetRepositories();
         // Here, for now, we expect one time of targets
-        List<String> targetDocs = new ArrayList<>(targetDocumentTypes.keySet());
+        List<String> targetDocs = new ArrayList<>();
+        targetDocs.add(Product.PRODUCT_EXTERNAL_NAME);
         // the target repository/index
-        String targetRepository = targetDocumentTypes.values().iterator().next();
+        String targetRepository = targetDocumentTypes.get(Product.PRODUCT_EXTERNAL_NAME);
         // pre process the query as we want here
         AzzimovBooleanQuery azzimovBooleanQuery = new AzzimovBooleanQuery(targetRepository, targetDocs);
 
@@ -169,7 +173,8 @@ public class AzzimovProductSearchQueryCreator extends AzzimovQueryCreator<Azzimo
                 allQueryTargetFields,
                 targetDocs,
                 normalizedQuery);
-        azzimovQueryStringQuery.setQueryMinimumShouldMatch(100);
+        azzimovQueryStringQuery.setQueryMinimumShouldMatch(
+                minimumFieldMatch.get(SearchConfiguration.SEARCH_ALL));
         azzimovBooleanQuery.addMustQuery(azzimovQueryStringQuery);
         azzimovBooleanQuery.setResultOffset(azzimovParameters.getAzzimovSearchRequest()
                 .getAzzimovSearchRequestParameters().getResultOffset());

@@ -94,6 +94,7 @@ public class FeedbackPersistManager {
                         FeedbackAttributeNumericValue feedbackAttributeNumericValue =
                                 new FeedbackAttributeNumericValue(Double.parseDouble(azzimovRequestFilter.getValue()));
                         feedbackAttribute.setFeedbackAttributeNumericValue(feedbackAttributeNumericValue);
+                        feedbackAttribute.setUnit(azzimovRequestFilter.getFilterType());
                     }
                     GuidanceAttributeEntry guidanceAttributeEntry = new GuidanceAttributeEntry(feedbackAttribute, 0);
                     guidanceAttributeEntryList.add(guidanceAttributeEntry);

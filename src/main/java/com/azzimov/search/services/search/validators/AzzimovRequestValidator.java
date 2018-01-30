@@ -5,7 +5,8 @@ import com.azzimov.search.services.search.params.AzzimovParameters;
 
 /**
  * Created by prasad on 1/10/18.
+ * AzzimovRequestValidator validate the request parameters
  */
 public interface AzzimovRequestValidator <R extends AzzimovRequest, P extends AzzimovParameters> {
-    public P validateRequest(R azzimovRequest);
+    P validateRequest(R azzimovRequest);
 }

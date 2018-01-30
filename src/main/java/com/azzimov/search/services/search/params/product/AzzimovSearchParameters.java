@@ -1,6 +1,7 @@
-package com.azzimov.search.services.search.params;
+package com.azzimov.search.services.search.params.product;
 
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
+import com.azzimov.search.services.search.params.AzzimovParameters;
 
 import java.util.Map;
 

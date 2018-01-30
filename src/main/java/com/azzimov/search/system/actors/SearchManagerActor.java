@@ -3,34 +3,29 @@ package com.azzimov.search.system.actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
-import com.azzimov.search.common.aggregators.AzzimovAggregator;
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
-import com.azzimov.search.common.query.AzzimovBooleanQuery;
-import com.azzimov.search.common.query.AzzimovFunctionScoreQuery;
-import com.azzimov.search.common.responses.AzzimovSearchResponse;
-import com.azzimov.search.common.sorters.AzzimovSorter;
+import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
+import com.azzimov.search.common.dto.externals.Product;
+import com.azzimov.search.common.dto.externals.Retailer;
 import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
+import com.azzimov.search.services.search.executors.AzzimovSearchExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
-import com.azzimov.search.services.search.aggregators.AzzimovProductSearchAggregatorCreator;
-import com.azzimov.search.services.search.filters.AzzimovProductSearchAttributeFilterCreator;
-import com.azzimov.search.services.search.filters.AzzimovProductSearchRefinementFilterCreator;
-import com.azzimov.search.services.search.params.AzzimovSearchParameters;
-import com.azzimov.search.services.search.queries.AzzimovProductSearchExactQueryCreator;
-import com.azzimov.search.services.search.queries.AzzimovProductSearchQueryCreator;
-import com.azzimov.search.services.search.queries.AzzimovSearchScoreAssimilatorCreator;
-import com.azzimov.search.services.search.reponses.AzzimovSearchResponseBuilder;
-import com.azzimov.search.services.search.sorters.AzzimovProductSearchSorterCreator;
-import com.azzimov.search.services.search.validators.AzzimovSearchRequestValidator;
+import com.azzimov.search.services.search.executors.product.AzzimovProductSearchExecutor;
+import com.azzimov.search.services.search.executors.retailer.AzzimovRetailerSearchExecutor;
+import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
+import com.azzimov.search.services.search.validators.product.AzzimovSearchRequestValidator;
 import com.azzimov.search.system.spring.AppConfiguration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+
 import java.security.InvalidParameterException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+
 import static com.azzimov.search.system.spring.AppConfiguration.SEARCH_ACTOR;
 
 
@@ -45,9 +40,11 @@ public class SearchManagerActor extends AbstractActor {
     private SearchExecutorService searchExecutorService;
     private ConfigListener configListener;
     private AppConfiguration appConfiguration;
+    private Map<String, AzzimovSearchExecutor> azzimovSearchExecutorMap;
 
     /**
      * Constructor for FeedbackManagerActor
+     *
      * @param searchExecutorService search executor service
      */
     public SearchManagerActor(SearchExecutorService searchExecutorService,
@@ -56,6 +53,7 @@ public class SearchManagerActor extends AbstractActor {
         this.searchExecutorService = searchExecutorService;
         this.configListener = configListener;
         this.appConfiguration = appConfiguration;
+        this.azzimovSearchExecutorMap = createAzzimovSearchExecutors(searchExecutorService, configListener);
     }
 
     @Override
@@ -72,69 +70,43 @@ public class SearchManagerActor extends AbstractActor {
                     try {
                         AzzimovSearchParameters azzimovSearchParameters = azzimovSearchRequestValidator
                                 .validateRequest(azzimovSearchRequest);
-                        AzzimovProductSearchQueryCreator azzimovProductSearchQueryCreator =
-                                new AzzimovProductSearchQueryCreator(configListener.getConfigurationHandler());
-                        AzzimovBooleanQuery azzimovBooleanQuery =
-                                azzimovProductSearchQueryCreator.createAzzimovQuery(azzimovSearchParameters, null);
-                        com.azzimov.search.common.requests.AzzimovSearchRequest searchRequest =
-                                new com.azzimov.search.common.requests.AzzimovSearchRequest();
-
-                        AzzimovProductSearchAttributeFilterCreator azzimovProductSearchFilterCreator =
-                                new AzzimovProductSearchAttributeFilterCreator(configListener.getConfigurationHandler());
-                        azzimovBooleanQuery = azzimovProductSearchFilterCreator
-                                .createAzzimovQuery(azzimovSearchParameters, azzimovBooleanQuery);
-                        AzzimovProductSearchRefinementFilterCreator productSearchRefinementFilterCreator =
-                                new AzzimovProductSearchRefinementFilterCreator(configListener.getConfigurationHandler());
-                        azzimovBooleanQuery = productSearchRefinementFilterCreator.createAzzimovQuery(azzimovSearchParameters,
-                                azzimovBooleanQuery);
-                        AzzimovProductSearchExactQueryCreator azzimovProductSearchExactQueryCreator =
-                                new AzzimovProductSearchExactQueryCreator(configListener.getConfigurationHandler());
-                        AzzimovFunctionScoreQuery azzimovFunctionScoreQuery =
-                                azzimovProductSearchExactQueryCreator
-                                        .createAzzimovQuery(azzimovSearchParameters, azzimovBooleanQuery);
-                        AzzimovSearchScoreAssimilatorCreator azzimovSearchScoreAssimilatorCreator =
-                                new AzzimovSearchScoreAssimilatorCreator(configListener.getConfigurationHandler());
-                        azzimovFunctionScoreQuery = azzimovSearchScoreAssimilatorCreator
-                                .createAzzimovQuery(azzimovSearchParameters, azzimovFunctionScoreQuery);
-                        searchRequest.setAzzimovQuery(azzimovFunctionScoreQuery);
-
-                        AzzimovProductSearchSorterCreator azzimovProductSearchSorterCreator =
-                                new AzzimovProductSearchSorterCreator(configListener.getConfigurationHandler());
-                        List<AzzimovSorter> azzimovSorterList = new ArrayList<>();
-                        azzimovSorterList = azzimovProductSearchSorterCreator
-                                .createAzzimovQuery(azzimovSearchParameters, azzimovSorterList);
-                        searchRequest.setAzzimovSorter(azzimovSorterList);
-
-                        AzzimovProductSearchAggregatorCreator azzimovProductSearchAggregatorCreator =
-                                new AzzimovProductSearchAggregatorCreator();
-                        List<AzzimovAggregator> termAggregatorList = azzimovProductSearchAggregatorCreator
-                                .createAzzimovQuery(azzimovSearchParameters, null);
-                        searchRequest.setAzzimovAggregator(termAggregatorList);
-
-                        AzzimovSearchResponse azzimovSearchResponse = searchExecutorService
-                                .getExecutorService().performSearchRequest(searchRequest);
-                        AzzimovSearchResponseBuilder azzimovSearchResponseBuilder = new AzzimovSearchResponseBuilder(
-                                azzimovSearchResponse,
-                                searchRequest);
-                        com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse
-                                azzimovSearchResponse1 = azzimovSearchResponseBuilder.build();
-                        logger.info("Returned search response = {}", azzimovSearchResponse.getTotalHits());
-                        getSender().tell(azzimovSearchResponse1, self());
+                        AzzimovSearchResponse azzimovSearchResponse = null;
+                        for (Map.Entry<String, String> targetTypes :
+                                azzimovSearchParameters.getTargetRepositories().entrySet()) {
+                            azzimovSearchResponse =
+                                    this.azzimovSearchExecutorMap.get(targetTypes.getKey()).search(azzimovSearchParameters);
+                            logger.info("Returning search response = {}",
+                                    azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+                        }
+                        getSender().tell(azzimovSearchResponse, self());
                         logger.info("sending response to = {} {} {}", getContext().sender(), getSender(), sender());
-                        persistSearchFeedback(azzimovSearchRequest, azzimovSearchResponse1);
+                        persistSearchFeedback(azzimovSearchRequest, azzimovSearchResponse);
                     } catch (InvalidParameterException invalidParameterException) {
-                        logger.error("Invalid parameters are given with the search request");
+                        logger.error("Invalid parameters are given with the search request" + invalidParameterException);
                     }
                 }).build();
     }
 
     private void persistSearchFeedback(AzzimovSearchRequest azzimovSearchRequest,
-                                       com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse azzimovSearchResponse) {
+                                       AzzimovSearchResponse azzimovSearchResponse) {
         ActorSelection selection = appConfiguration.actorSystem().actorSelection("/user/" + AppConfiguration.FEEDBACK_ACTOR);
         AzzimovFeedbackPersistRequest azzimovFeedbackPersistRequest = new AzzimovFeedbackPersistRequest();
         azzimovFeedbackPersistRequest.setAzzimovSearchRequest(azzimovSearchRequest);
         azzimovFeedbackPersistRequest.setAzzimovSearchResponse(azzimovSearchResponse);
         logger.error("Sending feedback persist request to  {}", selection);
         selection.tell(azzimovFeedbackPersistRequest, ActorRef.noSender());
+    }
+
+    private Map<String, AzzimovSearchExecutor> createAzzimovSearchExecutors(SearchExecutorService searchExecutorService,
+                                                                            ConfigListener configListener) {
+        Map<String, AzzimovSearchExecutor> azzimovSearchExecutorMap = new HashMap<>();
+        AzzimovSearchExecutor azzimovSearchExecutor = new AzzimovProductSearchExecutor(configListener.getConfigurationHandler(),
+                searchExecutorService);
+        azzimovSearchExecutorMap.put(Product.PRODUCT_EXTERNAL_NAME, azzimovSearchExecutor);
+
+        azzimovSearchExecutor = new AzzimovRetailerSearchExecutor(configListener.getConfigurationHandler(),
+                searchExecutorService);
+        azzimovSearchExecutorMap.put(Retailer.RETAILER_EXTERNAL_NAME, azzimovSearchExecutor);
+        return azzimovSearchExecutorMap;
     }
 }

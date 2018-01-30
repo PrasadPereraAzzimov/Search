@@ -1,17 +1,13 @@
-package com.azzimov.search.services.search.queries;
+package com.azzimov.search.services.search.queries.product;
 
 import com.azzimov.search.common.query.AzzimovFilterFunctionQuery;
 import com.azzimov.search.common.query.AzzimovFunctionScoreQuery;
 import com.azzimov.search.common.query.AzzimovMatchAllQuery;
 import com.azzimov.search.common.query.AzzimovQuery;
-import com.azzimov.search.common.query.AzzimovScriptQuery;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
-import com.azzimov.search.common.util.config.SearchConfiguration;
-import com.azzimov.search.services.search.params.AzzimovSearchParameters;
-import javassist.scopedpool.SoftValueHashMap;
-
+import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
+import com.azzimov.search.services.search.queries.AzzimovQueryCreator;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,20 +15,17 @@ import static com.azzimov.search.common.query.AzzimovFilterFunctionQuery.Azzimov
 
 /**
  * Created by prasad on 1/16/18.
+ * AzzimovProductSearchScoreQueryCreator creates function type score querying for Azzimvo product search
  */
-public class AzzimovSearchScoreAssimilatorCreator extends AzzimovQueryCreator<AzzimovSearchParameters,
+public class AzzimovProductSearchScoreQueryCreator extends AzzimovQueryCreator<AzzimovSearchParameters,
         AzzimovQuery, AzzimovFunctionScoreQuery> {
     private ConfigurationHandler configurationHandler;
 
-    public AzzimovSearchScoreAssimilatorCreator(ConfigurationHandler configurationHandler) {
+    public AzzimovProductSearchScoreQueryCreator(ConfigurationHandler configurationHandler) {
         this.configurationHandler = configurationHandler;
     }
     @Override
     public AzzimovFunctionScoreQuery createAzzimovQuery(AzzimovSearchParameters azzimovParameters, AzzimovQuery query) {
-        List<Object> configList = configurationHandler.getObjectConfigList(SearchConfiguration.QUERY_BOOST_VALUES);
-        Map<String, Integer> searchFieldBoosts = (Map<String, Integer>) configList.get(0);
-        configList = configurationHandler.getObjectConfigList(SearchConfiguration.QUERY_MINIMUM_SHOULD_MATCH);
-        Map<String, Integer> minimumFieldMatch = (Map<String, Integer>) configList.get(0);
         Map<String, String> targetDocumentTypes = azzimovParameters.getTargetRepositories();
         // Here, for now, we expect one time of targets
         List<String> targetDocs = new ArrayList<>(targetDocumentTypes.keySet());
@@ -50,7 +43,8 @@ public class AzzimovSearchScoreAssimilatorCreator extends AzzimovQueryCreator<Az
                 "Math.log10(Math.log10(_score + 1) + 1)");
         azzimovFilterFunctionQuery.setAzzimovQuery(new AzzimovMatchAllQuery(targetRepository, targetDocs));
         azzimovFunctionScoreQuery.setAzzimovScoreModeConstant(AzzimovFunctionScoreQuery.AzzimovScoreModeConstant.MULTIPLY);
-        azzimovFunctionScoreQuery.setAzzimovCombineFunctionConstant(AzzimovFunctionScoreQuery.AzzimovCombineFunctionConstant.REPLACE);
+        azzimovFunctionScoreQuery.setAzzimovCombineFunctionConstant(
+                AzzimovFunctionScoreQuery.AzzimovCombineFunctionConstant.REPLACE);
         azzimovFunctionScoreQuery.setResultOffset(azzimovParameters.getAzzimovSearchRequest()
                 .getAzzimovSearchRequestParameters().getResultOffset());
         azzimovFunctionScoreQuery.setResultSize(azzimovParameters.getAzzimovSearchRequest()

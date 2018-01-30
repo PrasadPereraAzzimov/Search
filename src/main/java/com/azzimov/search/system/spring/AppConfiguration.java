@@ -48,4 +48,14 @@ public class AppConfiguration {
         SpringExtensionIdProvider.SPRING_EXTENSION_ID_PROVIDER.get(system).initialize(applicationContext);
         return system;
     }
+
+    /*@Bean
+    public ConfigListener configListener(){
+        return new ConfigListener();
+    }
+
+    @Bean
+    public SearchExecutorService searchExecutorService(){
+        return new SearchExecutorService(configListener);
+    }*/
 }

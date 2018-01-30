@@ -1,4 +1,4 @@
-package com.azzimov.search.services.search.sorters;
+package com.azzimov.search.services.search.sorters.product;
 
 import com.azzimov.search.common.dto.LanguageCode;
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchSortRequestParameters;
@@ -6,11 +6,13 @@ import com.azzimov.search.common.sorters.AzzimovFieldSorter;
 import com.azzimov.search.common.sorters.AzzimovSorter;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SearchConfiguration;
-import com.azzimov.search.services.search.params.AzzimovSearchParameters;
+import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
+import com.azzimov.search.services.search.sorters.AzzimovSorterCreator;
 import java.util.List;
 import java.util.Map;
-import static com.azzimov.search.services.search.queries.AzzimovProductSearchExactQueryCreator.EXACT_FIELD_RAW;
-import static com.azzimov.search.services.search.queries.AzzimovQueryCreator.retrieveFieldPath;
+
+import static com.azzimov.search.services.search.utils.SearchFieldConstants.EXACT_FIELD_RAW;
+import static com.azzimov.search.services.search.utils.SearchFieldConstants.retrieveFieldPath;
 
 /**
  * Created by prasad on 1/25/18.

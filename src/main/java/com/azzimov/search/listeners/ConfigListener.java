@@ -32,7 +32,7 @@ import java.util.Map;
  * Created by RahulGupta on 2017-12-21.
  * ConfigListener Reads the config files and load them
  */
-@WebListener
+@Component
 public class ConfigListener implements ServletContextListener {
     private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
     private static final Logger logger = LogManager.getLogger(ConfigListener.class);

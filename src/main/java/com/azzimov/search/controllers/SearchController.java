@@ -44,7 +44,7 @@ public class SearchController {
         logger.info("Sending search request to = {}", selection);
         final CompletionStage<Object> completionStage  = PatternsCS.ask(selection, azzimovSearchRequest,
                 new Timeout(300, TimeUnit.SECONDS));
-        Object result = completionStage.toCompletableFuture().get(300, TimeUnit.SECONDS);
+        Object result = completionStage.toCompletableFuture().get(3000, TimeUnit.SECONDS);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
