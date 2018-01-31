@@ -23,7 +23,9 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.azzimov.search.system.spring.AppConfiguration.SEARCH_ACTOR;
@@ -70,17 +72,20 @@ public class SearchManagerActor extends AbstractActor {
                     try {
                         AzzimovSearchParameters azzimovSearchParameters = azzimovSearchRequestValidator
                                 .validateRequest(azzimovSearchRequest);
-                        AzzimovSearchResponse azzimovSearchResponse = null;
+                        List<AzzimovSearchResponse> azzimovSearchResponseList = new ArrayList<>();
                         for (Map.Entry<String, String> targetTypes :
                                 azzimovSearchParameters.getTargetRepositories().entrySet()) {
-                            azzimovSearchResponse =
-                                    this.azzimovSearchExecutorMap.get(targetTypes.getKey()).search(azzimovSearchParameters);
+                            List<AzzimovSearchParameters> azzimovSearchParametersList = new ArrayList<>();
+                            azzimovSearchParametersList.add(azzimovSearchParameters);
+                            azzimovSearchResponseList =
+                                    this.azzimovSearchExecutorMap.get(targetTypes.getKey())
+                                            .search(azzimovSearchParametersList);
                             logger.info("Returning search response = {}",
-                                    azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+                                    azzimovSearchResponseList.get(0).getAzzimovSearchInfo().getCount());
                         }
-                        getSender().tell(azzimovSearchResponse, self());
+                        getSender().tell(azzimovSearchResponseList, self());
                         logger.info("sending response to = {} {} {}", getContext().sender(), getSender(), sender());
-                        persistSearchFeedback(azzimovSearchRequest, azzimovSearchResponse);
+                        persistSearchFeedback(azzimovSearchRequest, azzimovSearchResponseList.get(0));
                     } catch (InvalidParameterException invalidParameterException) {
                         logger.error("Invalid parameters are given with the search request" + invalidParameterException);
                     }

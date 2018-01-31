@@ -44,7 +44,7 @@ public class FeedbackManagerActor extends AbstractActor {
                     FeedbackPersistManager feedbackPersistManager = new FeedbackPersistManager(searchExecutorService,
                             ConfigurationHandler.getConfigurationHandler());
                     if (azzimovFeedbackPersistRequest.getFeedback() != null) {
-                        feedbackPersistManager.persistFeedback(azzimovFeedbackPersistRequest.getFeedback());
+                        feedbackPersistManager.persistFeedback(azzimovFeedbackPersistRequest.getFeedback(), null);
                     } else {
                         feedbackPersistManager.persistFeedback(azzimovFeedbackPersistRequest.getAzzimovSearchRequest(),
                                 azzimovFeedbackPersistRequest.getAzzimovSearchResponse());

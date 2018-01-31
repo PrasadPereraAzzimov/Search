@@ -7,6 +7,8 @@ import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by prasad on 1/30/18.
@@ -23,8 +25,8 @@ public class AzzimovRetailerSearchExecutor extends AzzimovSearchExecutor {
     }
 
     @Override
-    public AzzimovSearchResponse search(AzzimovSearchParameters azzimovSearchParameters)
+    public List<AzzimovSearchResponse> search(List<AzzimovSearchParameters> azzimovSearchParameters)
             throws IllegalAccessException, IOException, InstantiationException {
-        return new AzzimovSearchResponse();
+        return new ArrayList<>();
     }
 }

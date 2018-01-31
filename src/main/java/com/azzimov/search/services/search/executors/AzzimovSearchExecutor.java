@@ -4,6 +4,7 @@ import com.azzimov.search.common.dto.communications.responses.search.AzzimovSear
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Created by prasad on 1/30/18.
@@ -11,6 +12,6 @@ import java.io.IOException;
  *  search. A different search implementation will provide different search on product/store etc.
  */
 public abstract class AzzimovSearchExecutor {
-    public abstract AzzimovSearchResponse search(AzzimovSearchParameters azzimovSearchParameters)
+    public abstract List<AzzimovSearchResponse> search(List<AzzimovSearchParameters> azzimovSearchParameters)
             throws IllegalAccessException, IOException, InstantiationException;
 }
