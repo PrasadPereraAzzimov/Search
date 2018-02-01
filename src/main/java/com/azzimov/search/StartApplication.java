@@ -3,6 +3,7 @@ package com.azzimov.search;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.routing.FromConfig;
+import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.search.system.spring.AppConfiguration;
 import com.azzimov.search.system.spring.SpringExtensionIdProvider;
 import org.apache.logging.log4j.LogManager;
@@ -32,6 +33,7 @@ public class StartApplication {
     private static final Logger logger = LogManager.getLogger(StartApplication.class);
     private ActorSystem system = null;
     private Map<String, ActorRef> applicationActors = null;
+    AzzimovCacheManager azzimovCacheManager;
 
     public static void main(String[] args) {
         SpringApplication.run(StartApplication.class, args);
@@ -65,5 +67,10 @@ public class StartApplication {
     @Autowired
     public void setAppConfiguration(AppConfiguration appConfiguration) {
         this.appConfiguration = appConfiguration;
+    }
+
+    @Autowired
+    public void setAzzimovCacheManager(AzzimovCacheManager azzimovCacheManager) {
+        this.azzimovCacheManager = azzimovCacheManager;
     }
 }

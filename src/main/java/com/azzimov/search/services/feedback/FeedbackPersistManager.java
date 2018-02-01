@@ -259,16 +259,20 @@ public class FeedbackPersistManager {
                     azzimovFeedbackQueryExecutor.search(azzimovSearchParametersList);
             // Based on order we go through in the AzzimovFeedbackQueryExecutor, we add the results count to guidance
             // feedbacks
+            int results = 20;
             Iterator<AzzimovSearchResponse> azzimovSearchResponseIterator = azzimovSearchResponseList.iterator();
             AzzimovSearchResponse azzimovSearchResponse = azzimovSearchResponseIterator.next();
-            guidanceFeedback.setQueryHitCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+            //guidanceFeedback.setQueryHitCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+            guidanceFeedback.setQueryHitCount(results);
             for (GuidanceAttributeEntry guidanceAttributeEntry : guidanceFeedback.getGuidanceAttributeEntries()) {
                 azzimovSearchResponse = azzimovSearchResponseIterator.next();
-                guidanceAttributeEntry.setResultCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+                //guidanceAttributeEntry.setResultCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+                guidanceAttributeEntry.setResultCount(results - 5);
             }
             for (GuidanceCategoryEntry guidanceCategoryEntry : guidanceFeedback.getGuidanceCategoryEntries()) {
                 azzimovSearchResponse = azzimovSearchResponseIterator.next();
-                guidanceCategoryEntry.setResultCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+               // guidanceCategoryEntry.setResultCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+                guidanceCategoryEntry.setResultCount(results - 13);
             }
         }
     }
