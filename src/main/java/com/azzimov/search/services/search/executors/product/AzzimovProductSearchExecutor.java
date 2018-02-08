@@ -12,7 +12,6 @@ import com.azzimov.search.services.search.executors.AzzimovSearchExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.filters.product.AzzimovProductSearchAttributeFilterCreator;
 import com.azzimov.search.services.search.filters.product.AzzimovProductSearchRefinementFilterCreator;
-import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import com.azzimov.search.services.search.queries.product.AzzimovProductSearchExactQueryCreator;
 import com.azzimov.search.services.search.queries.product.AzzimovProductSearchQueryCreator;
@@ -31,14 +30,11 @@ import java.util.List;
 public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
     private ConfigurationHandler configurationHandler;
     private SearchExecutorService searchExecutorService;
-    private LearnStatModelService learnStatModelService;
 
     public AzzimovProductSearchExecutor(ConfigurationHandler configurationHandler,
-                                        SearchExecutorService searchExecutorService,
-                                        LearnStatModelService learnStatModelService) {
+                                        SearchExecutorService searchExecutorService) {
         this.configurationHandler = configurationHandler;
         this.searchExecutorService = searchExecutorService;
-        this.learnStatModelService = learnStatModelService;
     }
 
     @Override
@@ -82,7 +78,8 @@ public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
             // Create custom query sorters that sort the search results if the sorting is specified in search request
             // parameters
             AzzimovProductSearchSorterCreator azzimovProductSearchSorterCreator =
-                    new AzzimovProductSearchSorterCreator(configurationHandler, learnStatModelService);
+                    new AzzimovProductSearchSorterCreator(configurationHandler,
+                            azzimovSearchParameters.getLearnCentroidClusterList());
             List<AzzimovSorter> azzimovSorterList = new ArrayList<>();
             azzimovSorterList = azzimovProductSearchSorterCreator
                     .createAzzimovSorter(azzimovSearchParameters, azzimovSorterList);

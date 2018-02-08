@@ -8,11 +8,13 @@ import com.azzimov.search.common.dto.communications.responses.search.AzzimovSear
 import com.azzimov.search.common.dto.externals.Product;
 import com.azzimov.search.common.dto.externals.Retailer;
 import com.azzimov.search.listeners.ConfigListener;
+import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
 import com.azzimov.search.services.search.executors.AzzimovSearchExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.executors.product.AzzimovProductSearchExecutor;
 import com.azzimov.search.services.search.executors.retailer.AzzimovRetailerSearchExecutor;
+import com.azzimov.search.services.search.learn.LearnCentroidCluster;
 import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import com.azzimov.search.services.search.validators.product.AzzimovSearchRequestValidator;
@@ -23,6 +25,8 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,6 +49,7 @@ public class SearchManagerActor extends AbstractActor {
     private AppConfiguration appConfiguration;
     private Map<String, AzzimovSearchExecutor> azzimovSearchExecutorMap;
     private LearnStatModelService learnStatModelService;
+    private AzzimovCacheManager azzimovCacheManager;
 
     /**
      * Constructor for FeedbackManagerActor
@@ -53,13 +58,15 @@ public class SearchManagerActor extends AbstractActor {
     public SearchManagerActor(SearchExecutorService searchExecutorService,
                               ConfigListener configListener,
                               AppConfiguration appConfiguration,
-                              LearnStatModelService learnStatModelService) {
+                              LearnStatModelService learnStatModelService,
+                              AzzimovCacheManager azzimovCacheManager) {
         this.searchExecutorService = searchExecutorService;
         this.configListener = configListener;
         this.appConfiguration = appConfiguration;
         this.azzimovSearchExecutorMap =
                 createAzzimovSearchExecutors(searchExecutorService, configListener, learnStatModelService);
         this.learnStatModelService = learnStatModelService;
+        this.azzimovCacheManager = azzimovCacheManager;
     }
 
     @Override
@@ -81,6 +88,14 @@ public class SearchManagerActor extends AbstractActor {
                                 azzimovSearchParameters.getTargetRepositories().entrySet()) {
                             List<AzzimovSearchParameters> azzimovSearchParametersList = new ArrayList<>();
                             azzimovSearchParametersList.add(azzimovSearchParameters);
+
+                            List<LearnCentroidCluster> learnCentroidClusters = new ArrayList<>();
+                            if (learnStatModelService.getGuidanceLearnCentroidCluster() != null)
+                                learnCentroidClusters.add(learnStatModelService.getGuidanceLearnCentroidCluster());
+                            LearnCentroidCluster learnCentroidCluster = retrieveMemberModel(azzimovSearchRequest);
+                            if (learnCentroidCluster != null)
+                                learnCentroidClusters.add(learnCentroidCluster);
+                            azzimovSearchParameters.setLearnCentroidClusterList(learnCentroidClusters);
                             azzimovSearchResponseList =
                                     this.azzimovSearchExecutorMap.get(targetTypes.getKey())
                                             .search(azzimovSearchParametersList);
@@ -102,7 +117,7 @@ public class SearchManagerActor extends AbstractActor {
         AzzimovFeedbackPersistRequest azzimovFeedbackPersistRequest = new AzzimovFeedbackPersistRequest();
         azzimovFeedbackPersistRequest.setAzzimovSearchRequest(azzimovSearchRequest);
         azzimovFeedbackPersistRequest.setAzzimovSearchResponse(azzimovSearchResponse);
-        logger.error("Sending feedback persist request to  {}", selection);
+        logger.info("Sending feedback persist request to  {}", selection);
         selection.tell(azzimovFeedbackPersistRequest, ActorRef.noSender());
     }
 
@@ -112,13 +127,31 @@ public class SearchManagerActor extends AbstractActor {
         Map<String, AzzimovSearchExecutor> azzimovSearchExecutorMap = new HashMap<>();
         AzzimovSearchExecutor azzimovSearchExecutor = new AzzimovProductSearchExecutor(
                 configListener.getConfigurationHandler(),
-                searchExecutorService,
-                learnStatModelService);
+                searchExecutorService);
         azzimovSearchExecutorMap.put(Product.PRODUCT_EXTERNAL_NAME, azzimovSearchExecutor);
 
         azzimovSearchExecutor = new AzzimovRetailerSearchExecutor(configListener.getConfigurationHandler(),
                 searchExecutorService);
         azzimovSearchExecutorMap.put(Retailer.RETAILER_EXTERNAL_NAME, azzimovSearchExecutor);
         return azzimovSearchExecutorMap;
+    }
+
+    private LearnCentroidCluster retrieveMemberModel(AzzimovSearchRequest azzimovSearchRequest) {
+        String modelKey = LearnCentroidCluster.CENTROID_GUIDANCE_KEY + "-" +
+                azzimovSearchRequest.getAzzimovUserRequestParameters().getMemberId();
+        try {
+            return LearnStatModelService.retrieveGuidanceLearningModelManager(configListener, azzimovCacheManager, modelKey);
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

@@ -14,10 +14,9 @@ import com.azzimov.search.common.query.AzzimovTermTermQuery;
 import com.azzimov.search.common.text.AzzimovTextProcessor;
 import com.azzimov.search.common.text.AzzimovTextQuery;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
-import com.azzimov.search.common.util.config.SearchConfiguration;
 import com.azzimov.search.services.search.learn.LearnCentroidCluster;
-import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
+import com.azzimov.search.services.search.queries.product.AzzimovProductSearchScoreQueryCreator;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +31,6 @@ import static com.azzimov.search.common.query.AzzimovFilterFunctionQuery.Azzimov
 import static com.azzimov.search.services.search.utils.SearchFieldConstants.EXACT_FIELD_RAW;
 import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALUE_DATE;
 import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALUE_NUM;
-import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALUE_TEXT;
 import static com.azzimov.search.services.search.utils.SearchFieldConstants.retrieveFieldPath;
 
 /**
@@ -40,8 +38,8 @@ import static com.azzimov.search.services.search.utils.SearchFieldConstants.retr
  */
 public class AzzimovProductSearchCentroidSorter extends AzzimovProductSearchSorterCreator {
     public AzzimovProductSearchCentroidSorter(ConfigurationHandler configurationHandler,
-                                              LearnStatModelService learnStatModelService) {
-        super(configurationHandler, learnStatModelService);
+                                              List<LearnCentroidCluster> learnCentroidClusterList) {
+        super(configurationHandler, learnCentroidClusterList);
     }
 
     @Override
@@ -64,103 +62,95 @@ public class AzzimovProductSearchCentroidSorter extends AzzimovProductSearchSort
         AzzimovTextProcessor azzimovTextProcessor = new AzzimovTextProcessor();
         String query = azzimovParameters.getAzzimovSearchRequest().
                 getAzzimovSearchRequestParameters().getQuery();
-        LearnCentroidCluster learnCentroidCluster = getLearnStatModelService().getGuidanceLearnCentroidCluster();
-        Map<String, Map<FeedbackAttribute, Float>> feedbackAttributeCentroids = learnCentroidCluster.getAttributeCentroids();
-        Map<FeedbackAttribute, Float> feedbackAttributeFloatMap = new HashMap<>();
-        try {
-            azzimovTextQueries  = azzimovTextProcessor.retrieveNGramQueries(query,
-                    locale,
-                    new ArrayList<>(),
-                    2,
-                    5);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        for (AzzimovTextQuery azzimovTextQuery : azzimovTextQueries) {
-            if (feedbackAttributeCentroids.containsKey(azzimovTextQuery.getProcessedQueryString()))
-                feedbackAttributeFloatMap.putAll(
-                        feedbackAttributeCentroids.get(azzimovTextQuery.getProcessedQueryString()));
-        }
-        AzzimovFunctionScoreQuery azzimovFunctionScoreQuery = new AzzimovFunctionScoreQuery(targetRepository, targetDocs);
-        List<AzzimovFilterFunctionQuery> azzimovFilterFunctionQueryList = new ArrayList<>();
-/*        for (Map.Entry<FeedbackAttribute, Float> entry : feedbackAttributeFloatMap.entrySet()) {
-            FeedbackAttribute feedbackAttribute = entry.getKey();
-            String feedbackAttributeGuidance = feedbackAttribute.getFeedbackAttributeLabel().getLabel();
-            if (feedbackAttribute.getFeedbackAttributeStringValue() != null) {
-                feedbackAttributeGuidance += "::" + feedbackAttribute.getFeedbackAttributeStringValue().getStrValue();
-            } else {
-                feedbackAttributeGuidance += "::" + feedbackAttribute.getFeedbackAttributeNumericValue().getNumericValue()
-                        + "::" + feedbackAttribute.getUnit();
-            }
-
-            AzzimovTermTermQuery azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
-                    retrieveFieldPath(Product.PRODUCT_GUIDANCE,
-                            Product.PRODUCT_ATTRIBUTES,
-                            LanguageCode.getLanguageField(languageCode)),
-                    targetDocs,
-                    feedbackAttributeGuidance);
-            AzzimovFilterFunctionQuery azzimovFilterFunctionQuery = new AzzimovFilterFunctionQuery();
-            azzimovFilterFunctionQuery.setAzzimovQuery(azzimovTermTermQuery);
-            azzimovFilterFunctionQuery.setAzzimovScoreFunctionConstant(WEIGHTFACTORFUNCTION);
-            azzimovFilterFunctionQuery.setScoreValue(entry.getValue());
-            azzimovFilterFunctionQueryList.add(azzimovFilterFunctionQuery);
-            System.out.println("---->>>> guidance attribute=" + feedbackAttributeGuidance);
-        }*/
-        for (Map.Entry<FeedbackAttribute, Float> entry : feedbackAttributeFloatMap.entrySet()) {
-            AzzimovBooleanQuery attributeBooleanQuery = new AzzimovBooleanQuery(targetRepository, targetDocs);
-            FeedbackAttribute feedbackAttribute = entry.getKey();
-            AzzimovTermTermQuery azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
-                    retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
-                            Attribute.ATTRIBUTE_LABEL,
-                            LanguageCode.getLanguageField(languageCode),
-                            EXACT_FIELD_RAW), targetDocs, feedbackAttribute.getFeedbackAttributeLabel().getLabel());
-            attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
-            if (feedbackAttribute.getFeedbackAttributeStringValue() != null &&
-                    !feedbackAttribute.getFeedbackAttributeStringValue().getStrValue().isEmpty()) {
-                azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
-                        retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
-                                Attribute.ATTRIBUTE_STRING_VALUE,
-                                LanguageCode.getLanguageField(languageCode),
-                                EXACT_FIELD_RAW), targetDocs,
-                        feedbackAttribute.getFeedbackAttributeStringValue().getStrValue());
-                attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
-            } else {
-                Double queryValue = feedbackAttribute.getFeedbackAttributeNumericValue().getNumericValue();
-                azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
-                        retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
-                                Attribute.ATTRIBUTE_NUMBER_VALUE,
-                                VALUE_NUM), targetDocs, queryValue);
-                attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
-            }
-            AzzimovNestedQuery azzimovNestedQuery = new AzzimovNestedQuery(targetRepository, targetDocs);
-            azzimovNestedQuery.setPath(Product.PRODUCT_ATTRIBUTES);
-            azzimovNestedQuery.setScoreMode(AzzimovNestedQuery.AzzimovNestedScoreMode.MAX);
-            azzimovNestedQuery.setAzzimovQuery(attributeBooleanQuery);
-            AzzimovFilterFunctionQuery azzimovFilterFunctionQuery = new AzzimovFilterFunctionQuery();
-            azzimovFilterFunctionQuery.setAzzimovScoreFunctionConstant(WEIGHTFACTORFUNCTION);
-            azzimovFilterFunctionQuery.setScoreValue(entry.getValue());
-            azzimovFilterFunctionQuery.setAzzimovQuery(azzimovNestedQuery);
-            azzimovFilterFunctionQueryList.add(azzimovFilterFunctionQuery);
-            System.out.println("---> Adding for attributes = " + feedbackAttribute.getFeedbackAttributeLabel().getLabel());
-        }
-        AzzimovFilterFunctionQuery azzimovFilterFunctionQuery = new AzzimovFilterFunctionQuery();
-        azzimovFilterFunctionQuery.setAzzimovQuery(new AzzimovMatchAllQuery(targetRepository, targetDocs));
-        azzimovFilterFunctionQuery.setAzzimovScoreFunctionConstant(WEIGHTFACTORFUNCTION);
-        azzimovFilterFunctionQuery.setScoreValue(0.000001f);
-        azzimovFilterFunctionQueryList.add(azzimovFilterFunctionQuery);
-
-        azzimovFunctionScoreQuery.setAzzimovScoreModeConstant(AzzimovFunctionScoreQuery.AzzimovScoreModeConstant.SUM);
-        azzimovFunctionScoreQuery.setAzzimovCombineFunctionConstant(
-                AzzimovFunctionScoreQuery.AzzimovCombineFunctionConstant.SUM);
-        azzimovFunctionScoreQuery.setAzzimovQuery(azzimovQueryList.get(0));
-        azzimovFunctionScoreQuery.setFilterFunctionQueryList(azzimovFilterFunctionQueryList);
-        azzimovFunctionScoreQuery.setResultOffset(azzimovParameters.getAzzimovSearchRequest()
-                .getAzzimovSearchRequestParameters().getResultOffset());
-        azzimovFunctionScoreQuery.setResultSize(azzimovParameters.getAzzimovSearchRequest()
-                .getAzzimovSearchRequestParameters().getResultsPerPage());
-        azzimovFunctionScoreQuery.setQuerySearchType(AzzimovQuery.AzzimovQuerySearchType.DFS_QUERY_THEN_FETCH);
         List<AzzimovFunctionScoreQuery> azzimovFunctionScoreQueryList = new ArrayList<>();
-        azzimovFunctionScoreQueryList.add(azzimovFunctionScoreQuery);
+
+        AzzimovQuery azzimovInputQuery = azzimovQueryList.get(0);
+        AzzimovFunctionScoreQuery azzimovOutputQuery = null;
+
+        for (LearnCentroidCluster learnCentroidCluster : getLearnStatModelServices()) {
+            Map<String, Map<FeedbackAttribute, Float>> feedbackAttributeCentroids = learnCentroidCluster.getAttributeCentroids();
+            Map<FeedbackAttribute, Float> feedbackAttributeFloatMap = new HashMap<>();
+            try {
+                azzimovTextQueries = azzimovTextProcessor.retrieveNGramQueries(query,
+                        locale,
+                        new ArrayList<>(),
+                        2,
+                        5);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            for (AzzimovTextQuery azzimovTextQuery : azzimovTextQueries) {
+                if (feedbackAttributeCentroids.containsKey(azzimovTextQuery.getProcessedQueryString()))
+                    feedbackAttributeFloatMap.putAll(
+                            feedbackAttributeCentroids.get(azzimovTextQuery.getProcessedQueryString()));
+            }
+            AzzimovFunctionScoreQuery azzimovFunctionScoreQuery = new AzzimovFunctionScoreQuery(targetRepository, targetDocs);
+            List<AzzimovFilterFunctionQuery> azzimovFilterFunctionQueryList = new ArrayList<>();
+            for (Map.Entry<FeedbackAttribute, Float> entry : feedbackAttributeFloatMap.entrySet()) {
+                AzzimovBooleanQuery attributeBooleanQuery = new AzzimovBooleanQuery(targetRepository, targetDocs);
+                FeedbackAttribute feedbackAttribute = entry.getKey();
+                AzzimovTermTermQuery azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
+                        retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
+                                Attribute.ATTRIBUTE_LABEL,
+                                LanguageCode.getLanguageField(languageCode),
+                                EXACT_FIELD_RAW), targetDocs, feedbackAttribute.getFeedbackAttributeLabel().getLabel());
+                attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
+                if (feedbackAttribute.getFeedbackAttributeStringValue() != null &&
+                        !feedbackAttribute.getFeedbackAttributeStringValue().getStrValue().isEmpty()) {
+                    azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
+                            retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
+                                    Attribute.ATTRIBUTE_STRING_VALUE,
+                                    LanguageCode.getLanguageField(languageCode),
+                                    EXACT_FIELD_RAW), targetDocs,
+                            feedbackAttribute.getFeedbackAttributeStringValue().getStrValue());
+                    attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
+                } else {
+                    Double queryValue = feedbackAttribute.getFeedbackAttributeNumericValue().getNumericValue();
+                    azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
+                            retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
+                                    Attribute.ATTRIBUTE_NUMBER_VALUE,
+                                    VALUE_NUM), targetDocs, queryValue);
+                    attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
+                }
+                AzzimovNestedQuery azzimovNestedQuery = new AzzimovNestedQuery(targetRepository, targetDocs);
+                azzimovNestedQuery.setPath(Product.PRODUCT_ATTRIBUTES);
+                azzimovNestedQuery.setScoreMode(AzzimovNestedQuery.AzzimovNestedScoreMode.MAX);
+                azzimovNestedQuery.setAzzimovQuery(attributeBooleanQuery);
+                AzzimovFilterFunctionQuery azzimovFilterFunctionQuery = new AzzimovFilterFunctionQuery();
+                azzimovFilterFunctionQuery.setAzzimovScoreFunctionConstant(WEIGHTFACTORFUNCTION);
+                azzimovFilterFunctionQuery.setScoreValue(entry.getValue());
+                azzimovFilterFunctionQuery.setAzzimovQuery(azzimovNestedQuery);
+                azzimovFilterFunctionQueryList.add(azzimovFilterFunctionQuery);
+                System.out.println("---> Adding for attributes = " + feedbackAttribute.getFeedbackAttributeLabel().getLabel());
+            }
+            AzzimovFilterFunctionQuery azzimovFilterFunctionQuery = new AzzimovFilterFunctionQuery();
+            azzimovFilterFunctionQuery.setAzzimovQuery(new AzzimovMatchAllQuery(targetRepository, targetDocs));
+            azzimovFilterFunctionQuery.setAzzimovScoreFunctionConstant(WEIGHTFACTORFUNCTION);
+            azzimovFilterFunctionQuery.setScoreValue(0.000001f);
+            azzimovFilterFunctionQueryList.add(azzimovFilterFunctionQuery);
+
+            azzimovFunctionScoreQuery.setAzzimovScoreModeConstant(AzzimovFunctionScoreQuery.AzzimovScoreModeConstant.SUM);
+            azzimovFunctionScoreQuery.setAzzimovCombineFunctionConstant(
+                    AzzimovFunctionScoreQuery.AzzimovCombineFunctionConstant.SUM);
+            azzimovFunctionScoreQuery.setAzzimovQuery(azzimovInputQuery);
+            azzimovFunctionScoreQuery.setFilterFunctionQueryList(azzimovFilterFunctionQueryList);
+            azzimovFunctionScoreQuery.setResultOffset(azzimovParameters.getAzzimovSearchRequest()
+                    .getAzzimovSearchRequestParameters().getResultOffset());
+            azzimovFunctionScoreQuery.setResultSize(azzimovParameters.getAzzimovSearchRequest()
+                    .getAzzimovSearchRequestParameters().getResultsPerPage());
+            azzimovFunctionScoreQuery.setQuerySearchType(AzzimovQuery.AzzimovQuerySearchType.DFS_QUERY_THEN_FETCH);
+
+            // Create score query that normalize the query score for proper relevance we need in query equation
+            AzzimovProductSearchScoreQueryCreator azzimovProductSearchScoreQueryCreator =
+                    new AzzimovProductSearchScoreQueryCreator(getConfigurationHandler());
+            azzimovFunctionScoreQuery = azzimovProductSearchScoreQueryCreator
+                    .createAzzimovQuery(azzimovParameters, azzimovFunctionScoreQuery);
+
+            azzimovInputQuery = azzimovFunctionScoreQuery;
+            azzimovOutputQuery = azzimovFunctionScoreQuery;
+        }
+        if (azzimovOutputQuery != null)
+            azzimovFunctionScoreQueryList.add(azzimovOutputQuery);
         return azzimovFunctionScoreQueryList;
     }
 }

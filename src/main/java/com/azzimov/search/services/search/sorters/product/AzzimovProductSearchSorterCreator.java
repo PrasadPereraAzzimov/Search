@@ -6,7 +6,7 @@ import com.azzimov.search.common.query.AzzimovFunctionScoreQuery;
 import com.azzimov.search.common.query.AzzimovQuery;
 import com.azzimov.search.common.sorters.AzzimovSorter;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
-import com.azzimov.search.services.search.learn.LearnStatModelService;
+import com.azzimov.search.services.search.learn.LearnCentroidCluster;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import com.azzimov.search.services.search.sorters.AzzimovSorterCreator;
 import java.util.ArrayList;
@@ -19,12 +19,12 @@ import java.util.List;
 public class AzzimovProductSearchSorterCreator extends AzzimovSorterCreator<AzzimovSearchParameters,
         AzzimovSorter, AzzimovSorter, AzzimovQuery, AzzimovFunctionScoreQuery> {
     private ConfigurationHandler configurationHandler;
-    private LearnStatModelService learnStatModelService;
+    private List<LearnCentroidCluster> learnCentroidClusterList;
 
     public AzzimovProductSearchSorterCreator(ConfigurationHandler configurationHandler,
-                                             LearnStatModelService learnStatModelService) {
+                                             List<LearnCentroidCluster> learnCentroidClusterList) {
         this.configurationHandler = configurationHandler;
-        this.learnStatModelService = learnStatModelService;
+        this.learnCentroidClusterList = learnCentroidClusterList;
     }
 
     @Override
@@ -81,9 +81,9 @@ public class AzzimovProductSearchSorterCreator extends AzzimovSorterCreator<Azzi
         switch (sortMode) {
             case RELEVANCE:
                 AzzimovProductSearchCentroidSorter azzimovProductSearchCentroidSorter =
-                        new AzzimovProductSearchCentroidSorter(configurationHandler, learnStatModelService);
-               azzimovFunctionScoreQueryList.addAll(azzimovProductSearchCentroidSorter
-                       .createAzzimovQuery(azzimovParameters, azzimovQueryList));
+                        new AzzimovProductSearchCentroidSorter(configurationHandler, learnCentroidClusterList);
+                azzimovFunctionScoreQueryList.addAll(azzimovProductSearchCentroidSorter
+                        .createAzzimovQuery(azzimovParameters, azzimovQueryList));
                 break;
         }
         return azzimovFunctionScoreQueryList;
@@ -93,7 +93,7 @@ public class AzzimovProductSearchSorterCreator extends AzzimovSorterCreator<Azzi
         return configurationHandler;
     }
 
-    public LearnStatModelService getLearnStatModelService() {
-        return learnStatModelService;
+    public List<LearnCentroidCluster> getLearnStatModelServices() {
+        return learnCentroidClusterList;
     }
 }

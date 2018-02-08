@@ -40,24 +40,25 @@ public class LearnStatModelService {
         this.productLearnCentroidCluster = new LearnCentroidCluster();
     }
 
-    public void updateGuidanceLearningModelManager() throws InvocationTargetException,
-            NoSuchMethodException,
-            InstantiationException,
-            IllegalAccessException,
-            IOException {
+
+    public static LearnCentroidCluster retrieveGuidanceLearningModelManager(ConfigListener configListener,
+                                                                             AzzimovCacheManager azzimovCacheManager,
+                                                                             String centroidKey)
+            throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, IOException {
         double guidanceLearningMaxCoefficient = configListener.
                 getConfigurationHandler().getDoubleConfig(SearchConfiguration.SEARCH_GUIDANCE_CENTROID_MAX_WEIGHT);
         CacheService<GuidanceModel> guidanceModelCacheService = azzimovCacheManager.getCacheProvider(GuidanceModel.class);
         // In in this version of Azzimov Search, we want to deploy only one bucket cache for all deployments..
         List<String> buckets = azzimovCacheManager.getCouchbaseConfiguration().getBuckets();
+        LearnCentroidCluster guidanceLearnCentroidCluster = new LearnCentroidCluster();
         String cacheName = buckets.get(0);
-        AzzimovCacheRequest<GuidanceModel> azzimovCacheRequest = new AzzimovCacheRequest<>(
-                cacheName, LearnCentroidCluster.CENTROID_GUIDANCE_KEY);
+        AzzimovCacheRequest<GuidanceModel> azzimovCacheRequest = new AzzimovCacheRequest<>(cacheName, centroidKey);
         AzzimovCacheResponse<GuidanceModel> azzimovCacheResponse = null;
         try {
             azzimovCacheResponse = guidanceModelCacheService.get(azzimovCacheRequest);
+            logger.debug("The centroids found : {} {} ...", centroidKey, azzimovCacheResponse.getObjectType());
         } catch (NullPointerException e) {
-            logger.warn("The cache objects for centroids not found : {} ...", LearnCentroidCluster.CENTROID_GUIDANCE_KEY);
+            logger.warn("The cache objects for centroids not found : {} ...", centroidKey);
         }
         if (azzimovCacheResponse != null) {
             GuidanceModel guidanceModel = azzimovCacheResponse.getObjectType();
@@ -101,6 +102,15 @@ public class LearnStatModelService {
             logger.info("Updating the guidance based centroid model ...");
             guidanceLearnCentroidCluster.setAttributeCentroids(attributeCentroids);
         }
+        return guidanceLearnCentroidCluster;
+    }
+    public void updateGuidanceLearningModelManager() throws InvocationTargetException,
+            NoSuchMethodException,
+            InstantiationException,
+            IllegalAccessException,
+            IOException {
+        guidanceLearnCentroidCluster = retrieveGuidanceLearningModelManager(this.configListener,
+                this.azzimovCacheManager, LearnCentroidCluster.CENTROID_GUIDANCE_KEY + "-ALL");
     }
 
     public LearnCentroidCluster getGuidanceLearnCentroidCluster() {
