@@ -4,6 +4,8 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.routing.FromConfig;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
+import com.azzimov.search.services.search.learn.LearnCentroidCluster;
+import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.search.system.spring.AppConfiguration;
 import com.azzimov.search.system.spring.SpringExtensionIdProvider;
 import org.apache.logging.log4j.LogManager;
@@ -15,6 +17,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 
 import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,7 +37,8 @@ public class StartApplication {
     private static final Logger logger = LogManager.getLogger(StartApplication.class);
     private ActorSystem system = null;
     private Map<String, ActorRef> applicationActors = null;
-    AzzimovCacheManager azzimovCacheManager;
+    private AzzimovCacheManager azzimovCacheManager;
+    private LearnStatModelService learnStatModelService;
 
     public static void main(String[] args) {
         SpringApplication.run(StartApplication.class, args);
@@ -62,6 +67,20 @@ public class StartApplication {
 
         logger.info("Initializing the search manager router = {}", routerSearch);
         applicationActors.put(SEARCH_ACTOR, routerSearch);
+        try {
+            logger.info("Retrieving learn centroids = {}", LearnCentroidCluster.CENTROID_GUIDANCE_KEY);
+            this.learnStatModelService.updateGuidanceLearningModelManager();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Autowired
@@ -72,5 +91,10 @@ public class StartApplication {
     @Autowired
     public void setAzzimovCacheManager(AzzimovCacheManager azzimovCacheManager) {
         this.azzimovCacheManager = azzimovCacheManager;
+    }
+
+    @Autowired
+    public void setLearnStatModelService(LearnStatModelService learnStatModelService) {
+        this.learnStatModelService = learnStatModelService;
     }
 }

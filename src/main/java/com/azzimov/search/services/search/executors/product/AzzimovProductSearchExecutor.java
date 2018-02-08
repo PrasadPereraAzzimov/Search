@@ -4,6 +4,7 @@ import com.azzimov.search.common.aggregators.AzzimovAggregator;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
 import com.azzimov.search.common.query.AzzimovBooleanQuery;
 import com.azzimov.search.common.query.AzzimovFunctionScoreQuery;
+import com.azzimov.search.common.query.AzzimovQuery;
 import com.azzimov.search.common.sorters.AzzimovSorter;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.services.search.aggregators.product.AzzimovProductSearchAggregatorCreator;
@@ -11,6 +12,7 @@ import com.azzimov.search.services.search.executors.AzzimovSearchExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.filters.product.AzzimovProductSearchAttributeFilterCreator;
 import com.azzimov.search.services.search.filters.product.AzzimovProductSearchRefinementFilterCreator;
+import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import com.azzimov.search.services.search.queries.product.AzzimovProductSearchExactQueryCreator;
 import com.azzimov.search.services.search.queries.product.AzzimovProductSearchQueryCreator;
@@ -29,11 +31,14 @@ import java.util.List;
 public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
     private ConfigurationHandler configurationHandler;
     private SearchExecutorService searchExecutorService;
+    private LearnStatModelService learnStatModelService;
 
     public AzzimovProductSearchExecutor(ConfigurationHandler configurationHandler,
-                                        SearchExecutorService searchExecutorService) {
+                                        SearchExecutorService searchExecutorService,
+                                        LearnStatModelService learnStatModelService) {
         this.configurationHandler = configurationHandler;
         this.searchExecutorService = searchExecutorService;
+        this.learnStatModelService = learnStatModelService;
     }
 
     @Override
@@ -46,9 +51,6 @@ public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
                     new AzzimovProductSearchQueryCreator(configurationHandler);
             AzzimovBooleanQuery azzimovBooleanQuery =
                     azzimovProductSearchQueryCreator.createAzzimovQuery(azzimovSearchParameters, null);
-
-            com.azzimov.search.common.requests.AzzimovSearchRequest searchRequest =
-                    new com.azzimov.search.common.requests.AzzimovSearchRequest();
 
             // Create attribute related filters on the search if the parameters contain attribute filters
             AzzimovProductSearchAttributeFilterCreator azzimovProductSearchFilterCreator =
@@ -74,17 +76,31 @@ public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
                     new AzzimovProductSearchScoreQueryCreator(configurationHandler);
             azzimovFunctionScoreQuery = azzimovProductSearchScoreQueryCreator
                     .createAzzimovQuery(azzimovSearchParameters, azzimovFunctionScoreQuery);
-            searchRequest.setAzzimovQuery(azzimovFunctionScoreQuery);
 
+            com.azzimov.search.common.requests.AzzimovSearchRequest searchRequest =
+                    new com.azzimov.search.common.requests.AzzimovSearchRequest();
             // Create custom query sorters that sort the search results if the sorting is specified in search request
             // parameters
             AzzimovProductSearchSorterCreator azzimovProductSearchSorterCreator =
-                    new AzzimovProductSearchSorterCreator(configurationHandler);
+                    new AzzimovProductSearchSorterCreator(configurationHandler, learnStatModelService);
             List<AzzimovSorter> azzimovSorterList = new ArrayList<>();
             azzimovSorterList = azzimovProductSearchSorterCreator
-                    .createAzzimovQuery(azzimovSearchParameters, azzimovSorterList);
-            searchRequest.setAzzimovSorter(azzimovSorterList);
+                    .createAzzimovSorter(azzimovSearchParameters, azzimovSorterList);
+            // If the sorter is NOT relevance, we have custom sorters and lets add them to search request
+            if (!azzimovSorterList.isEmpty())
+                searchRequest.setAzzimovSorter(azzimovSorterList);
 
+            List<AzzimovQuery> azzimovQueryList = new ArrayList<>();
+            azzimovQueryList.add(azzimovFunctionScoreQuery);
+            List<AzzimovFunctionScoreQuery> azzimovFunctionScoreQueryList =
+                    azzimovProductSearchSorterCreator.createAzzimovQuery(azzimovSearchParameters,
+                            azzimovQueryList);
+
+            // If the sort is relevance sorting, lets add that to the query
+            if (!azzimovFunctionScoreQueryList.isEmpty())
+                azzimovFunctionScoreQuery = azzimovFunctionScoreQueryList.get(0);
+
+            searchRequest.setAzzimovQuery(azzimovFunctionScoreQuery);
             // For now, this is here but will be moved to guidance manager task
             AzzimovProductSearchAggregatorCreator azzimovProductSearchAggregatorCreator =
                     new AzzimovProductSearchAggregatorCreator(configurationHandler);

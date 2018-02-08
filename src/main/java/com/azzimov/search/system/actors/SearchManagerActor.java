@@ -13,6 +13,7 @@ import com.azzimov.search.services.search.executors.AzzimovSearchExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.executors.product.AzzimovProductSearchExecutor;
 import com.azzimov.search.services.search.executors.retailer.AzzimovRetailerSearchExecutor;
+import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import com.azzimov.search.services.search.validators.product.AzzimovSearchRequestValidator;
 import com.azzimov.search.system.spring.AppConfiguration;
@@ -43,19 +44,22 @@ public class SearchManagerActor extends AbstractActor {
     private ConfigListener configListener;
     private AppConfiguration appConfiguration;
     private Map<String, AzzimovSearchExecutor> azzimovSearchExecutorMap;
+    private LearnStatModelService learnStatModelService;
 
     /**
      * Constructor for FeedbackManagerActor
-     *
      * @param searchExecutorService search executor service
      */
     public SearchManagerActor(SearchExecutorService searchExecutorService,
                               ConfigListener configListener,
-                              AppConfiguration appConfiguration) {
+                              AppConfiguration appConfiguration,
+                              LearnStatModelService learnStatModelService) {
         this.searchExecutorService = searchExecutorService;
         this.configListener = configListener;
         this.appConfiguration = appConfiguration;
-        this.azzimovSearchExecutorMap = createAzzimovSearchExecutors(searchExecutorService, configListener);
+        this.azzimovSearchExecutorMap =
+                createAzzimovSearchExecutors(searchExecutorService, configListener, learnStatModelService);
+        this.learnStatModelService = learnStatModelService;
     }
 
     @Override
@@ -103,10 +107,13 @@ public class SearchManagerActor extends AbstractActor {
     }
 
     private Map<String, AzzimovSearchExecutor> createAzzimovSearchExecutors(SearchExecutorService searchExecutorService,
-                                                                            ConfigListener configListener) {
+                                                                            ConfigListener configListener,
+                                                                            LearnStatModelService learnStatModelService) {
         Map<String, AzzimovSearchExecutor> azzimovSearchExecutorMap = new HashMap<>();
-        AzzimovSearchExecutor azzimovSearchExecutor = new AzzimovProductSearchExecutor(configListener.getConfigurationHandler(),
-                searchExecutorService);
+        AzzimovSearchExecutor azzimovSearchExecutor = new AzzimovProductSearchExecutor(
+                configListener.getConfigurationHandler(),
+                searchExecutorService,
+                learnStatModelService);
         azzimovSearchExecutorMap.put(Product.PRODUCT_EXTERNAL_NAME, azzimovSearchExecutor);
 
         azzimovSearchExecutor = new AzzimovRetailerSearchExecutor(configListener.getConfigurationHandler(),

@@ -266,13 +266,13 @@ public class FeedbackPersistManager {
             guidanceFeedback.setQueryHitCount(results);
             for (GuidanceAttributeEntry guidanceAttributeEntry : guidanceFeedback.getGuidanceAttributeEntries()) {
                 azzimovSearchResponse = azzimovSearchResponseIterator.next();
-                //guidanceAttributeEntry.setResultCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
-                guidanceAttributeEntry.setResultCount(results - 5);
+                guidanceAttributeEntry.setResultCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+                //guidanceAttributeEntry.setResultCount(results - 5);
             }
             for (GuidanceCategoryEntry guidanceCategoryEntry : guidanceFeedback.getGuidanceCategoryEntries()) {
                 azzimovSearchResponse = azzimovSearchResponseIterator.next();
-               // guidanceCategoryEntry.setResultCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
-                guidanceCategoryEntry.setResultCount(results - 13);
+                guidanceCategoryEntry.setResultCount(azzimovSearchResponse.getAzzimovSearchInfo().getCount());
+                //guidanceCategoryEntry.setResultCount(results - 13);
             }
         }
     }
