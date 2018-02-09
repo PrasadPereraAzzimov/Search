@@ -14,6 +14,7 @@ import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.trinity.common.learning.util.CustomDateDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.commons.collections4.CollectionUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -63,11 +64,15 @@ public class AzzimovCacheManager {
         int couchbasePort = configListener.getConfigurationHandler().getIntConfig(SystemConfiguration.COUCH_CACHE_PORT);
         List<String> hosts = new ArrayList<>();
         List<String> buckets = new ArrayList<>();
+        if(!CollectionUtils.isEmpty(hostObjects)){
+            for (Object hostObject : hostObjects)
+                hosts.add(hostObject.toString());
+        }
 
-        for (Object hostObject : hostObjects)
-            hosts.add(hostObject.toString());
-        for (Object bucketObject : bucketObjects)
-            buckets.add(bucketObject.toString());
+        if(!CollectionUtils.isEmpty(bucketObjects)){
+            for (Object bucketObject : bucketObjects)
+                buckets.add(bucketObject.toString());
+        }
 
         couchbaseConfiguration = new
                 CouchbaseConfiguration();

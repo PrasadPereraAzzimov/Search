@@ -13,6 +13,7 @@ import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.trinity.common.learning.ModelEntity;
 import com.azzimov.trinity.common.learning.guidance.GuidanceModel;
 import com.azzimov.trinity.common.learning.guidance.GuidanceModelElement;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +52,7 @@ public class LearnStatModelService {
         // In in this version of Azzimov Search, we want to deploy only one bucket cache for all deployments..
         List<String> buckets = azzimovCacheManager.getCouchbaseConfiguration().getBuckets();
         LearnCentroidCluster guidanceLearnCentroidCluster = new LearnCentroidCluster();
-        String cacheName = buckets.get(0);
+        String cacheName = CollectionUtils.isEmpty(buckets) ? null : buckets.get(0);
         AzzimovCacheRequest<GuidanceModel> azzimovCacheRequest = new AzzimovCacheRequest<>(cacheName, centroidKey);
         AzzimovCacheResponse<GuidanceModel> azzimovCacheResponse = null;
         try {
