@@ -71,7 +71,7 @@ public class AzzimovProductSearchCentroidSorter extends AzzimovProductSearchSort
             Map<String, Map<FeedbackAttribute, Float>> feedbackAttributeCentroids = learnCentroidCluster.getAttributeCentroids();
             Map<FeedbackAttribute, Float> feedbackAttributeFloatMap = new HashMap<>();
             try {
-                azzimovTextQueries = azzimovTextProcessor.retrieveNGramQueries(query,
+                azzimovTextQueries = azzimovTextProcessor.retrieveNGramTokenizedQueries(query,
                         locale,
                         new ArrayList<>(),
                         2,
