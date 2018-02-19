@@ -17,7 +17,6 @@ import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.services.search.learn.LearnCentroidCluster;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import com.azzimov.search.services.search.queries.product.AzzimovProductSearchScoreQueryCreator;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,7 +28,6 @@ import java.util.Set;
 
 import static com.azzimov.search.common.query.AzzimovFilterFunctionQuery.AzzimovScoreFunctionConstant.WEIGHTFACTORFUNCTION;
 import static com.azzimov.search.services.search.utils.SearchFieldConstants.EXACT_FIELD_RAW;
-import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALUE_DATE;
 import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALUE_NUM;
 import static com.azzimov.search.services.search.utils.SearchFieldConstants.retrieveFieldPath;
 
@@ -37,6 +35,10 @@ import static com.azzimov.search.services.search.utils.SearchFieldConstants.retr
  * Created by prasad on 2/1/18.
  */
 public class AzzimovProductSearchCentroidSorter extends AzzimovProductSearchSorterCreator {
+    private static final int MAX_N_GRAM_LIMIT = 5;
+    private static final int MIN_N_GRAM_LIMIT = 2;
+    private static float MIN_SCORE = 0.000001f;
+
     public AzzimovProductSearchCentroidSorter(ConfigurationHandler configurationHandler,
                                               List<LearnCentroidCluster> learnCentroidClusterList) {
         super(configurationHandler, learnCentroidClusterList);
@@ -74,8 +76,8 @@ public class AzzimovProductSearchCentroidSorter extends AzzimovProductSearchSort
                 azzimovTextQueries = azzimovTextProcessor.retrieveNGramTokenizedQueries(query,
                         locale,
                         new ArrayList<>(),
-                        2,
-                        5);
+                        MIN_N_GRAM_LIMIT,
+                        MAX_N_GRAM_LIMIT);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -121,12 +123,11 @@ public class AzzimovProductSearchCentroidSorter extends AzzimovProductSearchSort
                 azzimovFilterFunctionQuery.setScoreValue(entry.getValue());
                 azzimovFilterFunctionQuery.setAzzimovQuery(azzimovNestedQuery);
                 azzimovFilterFunctionQueryList.add(azzimovFilterFunctionQuery);
-                System.out.println("---> Adding for attributes = " + feedbackAttribute.getFeedbackAttributeLabel().getLabel());
             }
             AzzimovFilterFunctionQuery azzimovFilterFunctionQuery = new AzzimovFilterFunctionQuery();
             azzimovFilterFunctionQuery.setAzzimovQuery(new AzzimovMatchAllQuery(targetRepository, targetDocs));
             azzimovFilterFunctionQuery.setAzzimovScoreFunctionConstant(WEIGHTFACTORFUNCTION);
-            azzimovFilterFunctionQuery.setScoreValue(0.000001f);
+            azzimovFilterFunctionQuery.setScoreValue(MIN_SCORE);
             azzimovFilterFunctionQueryList.add(azzimovFilterFunctionQuery);
 
             azzimovFunctionScoreQuery.setAzzimovScoreModeConstant(AzzimovFunctionScoreQuery.AzzimovScoreModeConstant.SUM);

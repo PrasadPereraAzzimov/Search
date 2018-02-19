@@ -3,17 +3,17 @@ package com.azzimov.search.system.actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
+import akka.pattern.PatternsCS;
+import akka.util.Timeout;
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
 import com.azzimov.search.common.dto.externals.Product;
-import com.azzimov.search.common.dto.externals.Retailer;
 import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
 import com.azzimov.search.services.search.executors.AzzimovSearchExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.executors.product.AzzimovProductSearchExecutor;
-import com.azzimov.search.services.search.executors.retailer.AzzimovRetailerSearchExecutor;
 import com.azzimov.search.services.search.learn.LearnCentroidCluster;
 import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 
 import static com.azzimov.search.system.spring.AppConfiguration.SEARCH_ACTOR;
 
@@ -83,6 +85,7 @@ public class SearchManagerActor extends AbstractActor {
                     try {
                         AzzimovSearchParameters azzimovSearchParameters = azzimovSearchRequestValidator
                                 .validateRequest(azzimovSearchRequest);
+                        CompletionStage<Object> aggregateResponse = retrieveGuidanceResponse(azzimovSearchParameters);
                         List<AzzimovSearchResponse> azzimovSearchResponseList = new ArrayList<>();
                         for (Map.Entry<String, String> targetTypes :
                                 azzimovSearchParameters.getTargetRepositories().entrySet()) {
@@ -99,6 +102,16 @@ public class SearchManagerActor extends AbstractActor {
                             azzimovSearchResponseList =
                                     this.azzimovSearchExecutorMap.get(targetTypes.getKey())
                                             .search(azzimovSearchParametersList);
+                            // Retrieve aggregation response and combine with final searcg result response
+                            List<AzzimovSearchResponse> azzimovAggregateResponseList = (List<AzzimovSearchResponse>)
+                                    aggregateResponse.toCompletableFuture().get(3000, TimeUnit.SECONDS);;
+                            int index = 0;
+                            for (AzzimovSearchResponse azzimovSearchResponse : azzimovSearchResponseList) {
+                                azzimovSearchResponse
+                                        .getAzzimovSearchResponseParameter().setGuidance(
+                                                azzimovAggregateResponseList.get(index++)
+                                                        .getAzzimovSearchResponseParameter().getGuidance());
+                            }
                             logger.info("Returning search response = {}",
                                     azzimovSearchResponseList.get(0).getAzzimovSearchInfo().getCount());
                         }
@@ -121,6 +134,15 @@ public class SearchManagerActor extends AbstractActor {
         selection.tell(azzimovFeedbackPersistRequest, ActorRef.noSender());
     }
 
+
+    private CompletionStage<Object> retrieveGuidanceResponse(AzzimovSearchParameters azzimovSearchParameters) {
+        ActorSelection selection = appConfiguration.actorSystem().actorSelection("/user/" + AppConfiguration.AGGREGATE_ACTOR);
+        logger.info("Sending aggregate request to  {}", selection);
+        final CompletionStage<Object> completionStage  = PatternsCS.ask(selection, azzimovSearchParameters,
+                new Timeout(300, TimeUnit.SECONDS));
+        return completionStage;
+    }
+
     private Map<String, AzzimovSearchExecutor> createAzzimovSearchExecutors(SearchExecutorService searchExecutorService,
                                                                             ConfigListener configListener,
                                                                             LearnStatModelService learnStatModelService) {
@@ -129,10 +151,6 @@ public class SearchManagerActor extends AbstractActor {
                 configListener.getConfigurationHandler(),
                 searchExecutorService);
         azzimovSearchExecutorMap.put(Product.PRODUCT_EXTERNAL_NAME, azzimovSearchExecutor);
-
-        azzimovSearchExecutor = new AzzimovRetailerSearchExecutor(configListener.getConfigurationHandler(),
-                searchExecutorService);
-        azzimovSearchExecutorMap.put(Retailer.RETAILER_EXTERNAL_NAME, azzimovSearchExecutor);
         return azzimovSearchExecutorMap;
     }
 

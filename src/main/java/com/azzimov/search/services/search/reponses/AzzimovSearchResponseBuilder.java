@@ -1,7 +1,6 @@
 package com.azzimov.search.services.search.reponses;
 
 import com.azzimov.search.common.dto.SearchType;
-import com.azzimov.search.common.dto.communications.responses.AzzimovResponse;
 import com.azzimov.search.common.dto.communications.responses.AzzimovResponseStatus;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchInfo;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponseParameter;
@@ -73,7 +72,6 @@ public class AzzimovSearchResponseBuilder {
         guidance.setGuidanceFilters(guidanceFilterList);
         azzimovSearchResponseParameter.setGuidance(guidance);
         azzimovSearchResponseOut.setAzzimovSearchResponseParameter(azzimovSearchResponseParameter);
-        System.out.println("Results count found = " + azzimovSearchInfo.getCount());
         return azzimovSearchResponseOut;
     }
 

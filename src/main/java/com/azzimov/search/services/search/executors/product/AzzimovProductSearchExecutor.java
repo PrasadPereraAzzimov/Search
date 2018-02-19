@@ -1,13 +1,11 @@
 package com.azzimov.search.services.search.executors.product;
 
-import com.azzimov.search.common.aggregators.AzzimovAggregator;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
 import com.azzimov.search.common.query.AzzimovBooleanQuery;
 import com.azzimov.search.common.query.AzzimovFunctionScoreQuery;
 import com.azzimov.search.common.query.AzzimovQuery;
 import com.azzimov.search.common.sorters.AzzimovSorter;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
-import com.azzimov.search.services.search.aggregators.product.AzzimovProductSearchAggregatorCreator;
 import com.azzimov.search.services.search.executors.AzzimovSearchExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.filters.product.AzzimovProductSearchAttributeFilterCreator;
@@ -98,12 +96,6 @@ public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
                 azzimovFunctionScoreQuery = azzimovFunctionScoreQueryList.get(0);
 
             searchRequest.setAzzimovQuery(azzimovFunctionScoreQuery);
-            // For now, this is here but will be moved to guidance manager task
-            AzzimovProductSearchAggregatorCreator azzimovProductSearchAggregatorCreator =
-                    new AzzimovProductSearchAggregatorCreator(configurationHandler);
-            List<AzzimovAggregator> termAggregatorList = azzimovProductSearchAggregatorCreator
-                    .createAzzimovQuery(azzimovSearchParameters, null);
-            searchRequest.setAzzimovAggregator(termAggregatorList);
 
             // Execute the query and retrieve results
             com.azzimov.search.common.responses.AzzimovSearchResponse azzimovSearchResponse = searchExecutorService

@@ -10,6 +10,6 @@ import java.util.List;
  * AzzimovAggregatorCreator provides an interface definition to create concrete Azzimov Queries to Azzimov Search
  */
 public abstract class AzzimovAggregatorCreator <Parameters extends AzzimovParameters,
-        AggregatorI extends AzzimovAggregator, AggregatorO extends AzzimovAggregator> {
-    public abstract List<AggregatorO> createAzzimovQuery(Parameters azzimovParameters, List<AggregatorI> aggregatorI);
+        AggregatorI, AggregatorO extends AzzimovAggregator> {
+    public abstract List<AggregatorO> createAzzimovQuery(Parameters azzimovParameters, AggregatorI aggregatorI);
 }

@@ -35,7 +35,7 @@ public class AzzimovProductSearchExactQueryCreator extends AzzimovQueryCreator<A
         AzzimovQuery, AzzimovFunctionScoreQuery> {
     private ConfigurationHandler configurationHandler;
     private static final int MAX_N_GRAM_LIMIT = 5;
-    private static final int MIN_N_GRAM_LIMIT = 5;
+    private static final int MIN_N_GRAM_LIMIT = 2;
 
     public AzzimovProductSearchExactQueryCreator(ConfigurationHandler configurationHandler) {
         this.configurationHandler = configurationHandler;

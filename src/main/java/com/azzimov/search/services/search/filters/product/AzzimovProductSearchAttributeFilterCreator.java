@@ -10,8 +10,8 @@ import com.azzimov.search.common.query.AzzimovTermTermQuery;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.services.search.filters.AzzimovFilterCreator;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -52,47 +52,59 @@ public class AzzimovProductSearchAttributeFilterCreator extends AzzimovFilterCre
         LanguageCode languageCode = azzimovParameters.getAzzimovSearchRequest()
                 .getAzzimovSearchRequestParameters().getLanguage().getLanguageCode();
 
-        List<AzzimovRequestFilter> azzimovRequestFilterList = azzimovParameters.
-                getAzzimovSearchRequest().getAzzimovSearchRequestParameters().getAzzimovRequestFilters();
-        if (azzimovRequestFilterList != null && !azzimovRequestFilterList.isEmpty()) {
-            AzzimovBooleanQuery filterBooleanQuery = new AzzimovBooleanQuery(targetRepository, targetDocs);
-            for (AzzimovRequestFilter azzimovRequestFilter : azzimovRequestFilterList) {
-                AzzimovBooleanQuery attributeBooleanQuery = new AzzimovBooleanQuery(targetRepository, targetDocs);
-                AzzimovTermTermQuery azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
-                        retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
-                                Attribute.ATTRIBUTE_LABEL,
-                                LanguageCode.getLanguageField(languageCode),
-                                EXACT_FIELD_RAW), targetDocs, azzimovRequestFilter.getLabel());
-                attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
-                if (azzimovRequestFilter.getFilterType().equals(VALUE_TEXT)) {
-                    azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
-                            retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
-                                    Attribute.ATTRIBUTE_STRING_VALUE,
-                                    LanguageCode.getLanguageField(languageCode),
-                                    EXACT_FIELD_RAW), targetDocs, azzimovRequestFilter.getValue());
-                    attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
-                } else if (azzimovRequestFilter.getFilterType().equals(VALUE_DATE)) {
-                    Double queryValue = Double.parseDouble(azzimovRequestFilter.getValue());
-                    azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
-                            retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
-                                    Attribute.ATTRIBUTE_NUMBER_VALUE,
-                                    VALUE_DATE), targetDocs, queryValue);
-                    attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
-                } else {
-                    Double queryValue = Double.parseDouble(azzimovRequestFilter.getValue());
-                    azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
-                            retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
-                                    Attribute.ATTRIBUTE_NUMBER_VALUE,
-                                    VALUE_NUM), targetDocs, queryValue);
-                    attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
-                }
-                AzzimovNestedQuery azzimovNestedQuery = new AzzimovNestedQuery(targetRepository, targetDocs);
-                azzimovNestedQuery.setPath(Product.PRODUCT_ATTRIBUTES);
-                azzimovNestedQuery.setScoreMode(AzzimovNestedQuery.AzzimovNestedScoreMode.MAX);
-                azzimovNestedQuery.setAzzimovQuery(attributeBooleanQuery);
-                filterBooleanQuery.addShouldQuery(azzimovNestedQuery);
+        // Before creating attribute filters, we need to group filters based on filter labels.
+        List<AzzimovRequestFilter> azzimovRequestFilterList = azzimovParameters.getAzzimovSearchRequest()
+                .getAzzimovSearchRequestParameters().getAzzimovRequestFilters();
+        Map<String, List<AzzimovRequestFilter>> azzimovRequestFilerMap = new HashMap<>();
+        for (AzzimovRequestFilter azzimovRequestFilter : azzimovRequestFilterList) {
+            if (!azzimovRequestFilerMap.containsKey(azzimovRequestFilter.getLabel())) {
+                azzimovRequestFilerMap.put(azzimovRequestFilter.getLabel(), new ArrayList<>());
             }
-            azzimovQueries.addFilterQuery(filterBooleanQuery);
+            azzimovRequestFilerMap.get(azzimovRequestFilter.getLabel()).add(azzimovRequestFilter);
+        }
+        if (!azzimovRequestFilerMap.isEmpty()) {
+            AzzimovBooleanQuery azzimovBooleanQueryMajor = new AzzimovBooleanQuery(targetRepository, targetDocs);
+            for (Map.Entry<String, List<AzzimovRequestFilter>> azzimovRequestFilterEntry : azzimovRequestFilerMap.entrySet()) {
+                AzzimovBooleanQuery filterBooleanQuery = new AzzimovBooleanQuery(targetRepository, targetDocs);
+                for (AzzimovRequestFilter azzimovRequestFilter : azzimovRequestFilterEntry.getValue()) {
+                    AzzimovBooleanQuery attributeBooleanQuery = new AzzimovBooleanQuery(targetRepository, targetDocs);
+                    AzzimovTermTermQuery azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
+                            retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
+                                    Attribute.ATTRIBUTE_LABEL,
+                                    LanguageCode.getLanguageField(languageCode),
+                                    EXACT_FIELD_RAW), targetDocs, azzimovRequestFilter.getLabel());
+                    attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
+                    if (azzimovRequestFilter.getFilterType().equals(VALUE_TEXT)) {
+                        azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
+                                retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
+                                        Attribute.ATTRIBUTE_STRING_VALUE,
+                                        LanguageCode.getLanguageField(languageCode),
+                                        EXACT_FIELD_RAW), targetDocs, azzimovRequestFilter.getValue());
+                        attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
+                    } else if (azzimovRequestFilter.getFilterType().equals(VALUE_DATE)) {
+                        Double queryValue = Double.parseDouble(azzimovRequestFilter.getValue());
+                        azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
+                                retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
+                                        Attribute.ATTRIBUTE_NUMBER_VALUE,
+                                        VALUE_DATE), targetDocs, queryValue);
+                        attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
+                    } else {
+                        Double queryValue = Double.parseDouble(azzimovRequestFilter.getValue());
+                        azzimovTermTermQuery = new AzzimovTermTermQuery(targetRepository,
+                                retrieveFieldPath(Product.PRODUCT_ATTRIBUTES,
+                                        Attribute.ATTRIBUTE_NUMBER_VALUE,
+                                        VALUE_NUM), targetDocs, queryValue);
+                        attributeBooleanQuery.addMustQuery(azzimovTermTermQuery);
+                    }
+                    AzzimovNestedQuery azzimovNestedQuery = new AzzimovNestedQuery(targetRepository, targetDocs);
+                    azzimovNestedQuery.setPath(Product.PRODUCT_ATTRIBUTES);
+                    azzimovNestedQuery.setScoreMode(AzzimovNestedQuery.AzzimovNestedScoreMode.MAX);
+                    azzimovNestedQuery.setAzzimovQuery(attributeBooleanQuery);
+                    filterBooleanQuery.addShouldQuery(azzimovNestedQuery);
+                }
+                azzimovBooleanQueryMajor.addMustQuery(filterBooleanQuery);
+            }
+            azzimovQueries.addFilterQuery(azzimovBooleanQueryMajor);
         }
         return azzimovQueries;
     }
