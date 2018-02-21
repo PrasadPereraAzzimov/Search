@@ -7,7 +7,7 @@ import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.search.services.search.executors.AzzimovAggregateExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
-import com.azzimov.search.services.search.executors.product.AzzimovProductAggregateExecutor;
+import com.azzimov.search.services.search.executors.product.AzzimovProductAggregateExecutorCreator;
 import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import com.azzimov.search.system.spring.AppConfiguration;
@@ -90,7 +90,7 @@ public class SearchAggregationManagerActor extends AbstractActor {
                                                                                   ConfigListener configListener,
                                                                                   AzzimovCacheManager azzimovCacheManager) {
         Map<String, AzzimovAggregateExecutor> azzimovSearchExecutorMap = new HashMap<>();
-        AzzimovAggregateExecutor azzimovAggregateExecutor = new AzzimovProductAggregateExecutor(
+        AzzimovAggregateExecutor azzimovAggregateExecutor = new AzzimovProductAggregateExecutorCreator(
                 configListener.getConfigurationHandler(),
                 searchExecutorService,
                 azzimovCacheManager);

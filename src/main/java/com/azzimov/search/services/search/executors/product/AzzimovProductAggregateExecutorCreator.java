@@ -5,6 +5,8 @@ import com.azzimov.search.common.dto.communications.requests.AzzimovRequestFilte
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
 import com.azzimov.search.common.dto.externals.Guidance;
 import com.azzimov.search.common.dto.externals.GuidanceFilter;
+import com.azzimov.search.common.dto.externals.GuidanceFilterValue;
+import com.azzimov.search.common.dto.externals.ProductGuidance;
 import com.azzimov.search.common.query.AzzimovBooleanQuery;
 import com.azzimov.search.common.requests.AzzimovMultiSearchRequest;
 import com.azzimov.search.common.responses.AzzimovMultiSearchResponse;
@@ -33,14 +35,14 @@ import static com.azzimov.search.services.search.utils.AzzimovSearchDTOReplicato
  * Created by prasad on 2/12/18.
  * An implentation of AzzimovAggregateExecutor for product category/attribute aggregations
  */
-public class AzzimovProductAggregateExecutor extends AzzimovAggregateExecutor {
+public class AzzimovProductAggregateExecutorCreator extends AzzimovAggregateExecutor {
     private ConfigurationHandler configurationHandler;
     private SearchExecutorService searchExecutorService;
     private AzzimovCacheManager azzimovCacheManager;
 
-    public AzzimovProductAggregateExecutor(ConfigurationHandler configurationHandler,
-                                           SearchExecutorService searchExecutorService,
-                                           AzzimovCacheManager azzimovCacheManager) {
+    public AzzimovProductAggregateExecutorCreator(ConfigurationHandler configurationHandler,
+                                                  SearchExecutorService searchExecutorService,
+                                                  AzzimovCacheManager azzimovCacheManager) {
         this.configurationHandler = configurationHandler;
         this.searchExecutorService = searchExecutorService;
         this.azzimovCacheManager = azzimovCacheManager;
@@ -53,6 +55,8 @@ public class AzzimovProductAggregateExecutor extends AzzimovAggregateExecutor {
         for (AzzimovSearchParameters azzimovSearchParameters : azzimovSearchParametersList) {
             AzzimovSearchResponse azzimovSearchResponse =
                     retrieveAndMergeAzzimovProductAggregations(azzimovSearchParameters);
+            markSelectedGuidanceFilters(azzimovSearchParameters, azzimovSearchResponse
+                    .getAzzimovSearchResponseParameter().getGuidance());
             azzimovSearchResponseList.add(azzimovSearchResponse);
         }
         return azzimovSearchResponseList;
@@ -120,7 +124,7 @@ public class AzzimovProductAggregateExecutor extends AzzimovAggregateExecutor {
             throws IllegalAccessException, IOException, InstantiationException {
         // First, group the filters based on label so we can apply them separately to the queries
         List<AzzimovRequestFilter> azzimovRequestFilterList = azzimovSearchParameters.getAzzimovSearchRequest()
-        .getAzzimovSearchRequestParameters().getAzzimovRequestFilters();
+                .getAzzimovSearchRequestParameters().getAzzimovRequestFilters();
 
         Map<String, List<AzzimovRequestFilter>> azzimovRequestFilerMap = new HashMap<>();
         for (AzzimovRequestFilter azzimovRequestFilter : azzimovRequestFilterList) {
@@ -146,7 +150,8 @@ public class AzzimovProductAggregateExecutor extends AzzimovAggregateExecutor {
             String label = entry.getKey();
             List<AzzimovRequestFilter> azzimovRequestFilters = entry.getValue();
             List<String> includeList = new ArrayList<>();
-            includeList.add(AzzimovTextProcessor.retrieveNonAlphaNumericEscapedText(label) + "::.*");
+            includeList.add(AzzimovTextProcessor.retrieveNonAlphaNumericEscapedText(label) +
+                    ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR + ".*");
             AzzimovSearchParameters azzimovSearchParametersSub = replicate(azzimovSearchParameters);
             azzimovSearchParametersSub.getAzzimovSearchRequest()
                     .getAzzimovSearchRequestParameters().setAzzimovRequestFilters(azzimovRequestFilters);
@@ -161,6 +166,8 @@ public class AzzimovProductAggregateExecutor extends AzzimovAggregateExecutor {
 
         Iterator<com.azzimov.search.common.responses.AzzimovSearchResponse> azzimovSearchResponseIterator =
                 azzimovMultiSearchResponse.getAzzimovSearchResponseList().iterator();
+
+        // Build the first response that contains all the aggregations
         AzzimovSearchResponseBuilder azzimovSearchResponseBuilder = new AzzimovSearchResponseBuilder(
                 azzimovSearchResponseIterator.next(),
                 null);
@@ -176,12 +183,17 @@ public class AzzimovProductAggregateExecutor extends AzzimovAggregateExecutor {
             Guidance guidance = azzimovSearchResponse.getAzzimovSearchResponseParameter().getGuidance();
             // Retrieve the specific filter
             if (!guidance.getGuidanceFilters().isEmpty()) {
+                // If there's guidances, merge them with the very firrst main guidances dto
+                // by definition, the sub aggregations only contains one entry
                 GuidanceFilter guidanceFilter = guidance.getGuidanceFilters().get(0);
                 Iterator<GuidanceFilter> guidanceFilterIterator = mainGuidance.getGuidanceFilters().iterator();
-                while (guidanceFilterIterator.hasNext()) {
+                // First remove the guidance in the main guidance dto that matches the sub guidance dto
+                boolean found = false;
+                while (guidanceFilterIterator.hasNext() && !found) {
                     GuidanceFilter guidanceFilterMain = guidanceFilterIterator.next();
                     if (guidanceFilterMain.getLabel().equals(guidanceFilter.getLabel())) {
                         guidanceFilterIterator.remove();
+                        found = true;
                     }
                 }
                 mainSearchResponse.getAzzimovSearchResponseParameter()
@@ -189,5 +201,39 @@ public class AzzimovProductAggregateExecutor extends AzzimovAggregateExecutor {
             }
         }
         return mainSearchResponse;
+    }
+
+    /**
+     * Mark selected filters
+     * @param azzimovSearchParameters   Azzimov search parameters
+     * @param guidance  response guidance
+     */
+    private void markSelectedGuidanceFilters(AzzimovSearchParameters azzimovSearchParameters,
+                                             Guidance guidance) {
+        Iterator<AzzimovRequestFilter> requestFilterIterator = azzimovSearchParameters.getAzzimovSearchRequest()
+                .getAzzimovSearchRequestParameters()
+                .getAzzimovRequestFilters()
+                .iterator();
+        // mark the specific filter that were in the request as selected
+        while (requestFilterIterator.hasNext()) {
+            AzzimovRequestFilter azzimovRequestFilter = requestFilterIterator.next();
+            Iterator<GuidanceFilter> guidanceFilterIterator = guidance.getGuidanceFilters().iterator();
+            if (guidanceFilterIterator.hasNext()) {
+                GuidanceFilter guidanceFilter = guidanceFilterIterator.next();
+                while (guidanceFilterIterator.hasNext() &&
+                        !azzimovRequestFilter.getLabel().equals(guidanceFilter.getLabel())) {
+                    guidanceFilter = guidanceFilterIterator.next();
+                }
+                // We probably found the right filter
+                Iterator<GuidanceFilterValue> guidanceFilterValueIterator =
+                        guidanceFilter.getGuidanceFilterValues().iterator();
+                while (guidanceFilterValueIterator.hasNext()) {
+                    GuidanceFilterValue guidanceFilterValue = guidanceFilterValueIterator.next();
+                    if (guidanceFilterValue.getValue().equals(azzimovRequestFilter.getValue())) {
+                        guidanceFilterValue.setSelected(true);
+                    }
+                }
+            }
+        }
     }
 }

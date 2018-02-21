@@ -11,7 +11,7 @@ public class SearchFieldConstants {
     // for now, this will be here, in future it should be within the dto libs
     public static final String EXACT_FIELD = "raw_lower";
     public static final String EXACT_FIELD_RAW = "raw";
-    public static final String VALUE_NUM = "values_num";
+    public static final String VALUE_NUM = "value_num";
     public static final String VALUE_DATE = "value_date";
     public static final String VALUE_TEXT = "value_text";
 
