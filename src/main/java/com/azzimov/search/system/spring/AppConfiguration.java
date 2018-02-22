@@ -37,6 +37,7 @@ public class AppConfiguration {
      */
     public static final String FEEDBACK_ACTOR = "router_feedback";
     public static final String SEARCH_ACTOR = "router_search";
+    public static final String AGGREGATE_ACTOR = "router_aggregate";
 
     @Bean
     public ActorSystem actorSystem() {
@@ -48,14 +49,4 @@ public class AppConfiguration {
         SpringExtensionIdProvider.SPRING_EXTENSION_ID_PROVIDER.get(system).initialize(applicationContext);
         return system;
     }
-
-    /*@Bean
-    public ConfigListener configListener(){
-        return new ConfigListener();
-    }
-
-    @Bean
-    public SearchExecutorService searchExecutorService(){
-        return new SearchExecutorService(configListener);
-    }*/
 }

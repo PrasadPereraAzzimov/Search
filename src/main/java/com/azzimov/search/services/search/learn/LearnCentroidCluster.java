@@ -4,6 +4,7 @@ import com.azzimov.search.common.dto.internals.feedback.FeedbackAttribute;
 import com.azzimov.search.common.dto.internals.feedback.FeedbackCategory;
 import com.google.common.collect.Maps;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -11,7 +12,7 @@ import java.util.Map;
  * For now, since we need to port the old model to new, we will create these LearnCentroidCluster to manage the read
  * centroids
  */
-public class LearnCentroidCluster {
+public class LearnCentroidCluster implements Serializable {
     public static final String CENTROID_GUIDANCE_KEY = "guidance-learning-model";
     private Map<String, Map<FeedbackCategory, Float>> categoryCentroids = Maps.newConcurrentMap();
     private Map<String, Map<FeedbackAttribute, Float>> attributeCentroids = Maps.newConcurrentMap();

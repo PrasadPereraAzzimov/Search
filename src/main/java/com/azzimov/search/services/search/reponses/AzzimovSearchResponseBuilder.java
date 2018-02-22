@@ -1,7 +1,6 @@
 package com.azzimov.search.services.search.reponses;
 
 import com.azzimov.search.common.dto.SearchType;
-import com.azzimov.search.common.dto.communications.responses.AzzimovResponse;
 import com.azzimov.search.common.dto.communications.responses.AzzimovResponseStatus;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchInfo;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponseParameter;
@@ -30,6 +29,7 @@ import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALU
 public class AzzimovSearchResponseBuilder {
     private AzzimovSearchResponse azzimovSearchResponse;
     private AzzimovSearchRequest azzimovSearchRequest;
+    private static final String PRODUCT_PREFIX = "prod::";
 
     public AzzimovSearchResponseBuilder(AzzimovSearchResponse azzimovSearchResponse,
                                         AzzimovSearchRequest azzimovSearchRequest) {
@@ -49,7 +49,9 @@ public class AzzimovSearchResponseBuilder {
         AzzimovSearchResponseParameter azzimovSearchResponseParameter = new AzzimovSearchResponseParameter();
         List<Long> productIds = new ArrayList<>();
         for (AzzimovSearchHitResponse searchHitResponse : azzimovSearchResponse.getAzzimovSearchHitResponseList()){
-            productIds.add(Long.parseLong(searchHitResponse.getId()));
+            String productId = searchHitResponse.getId().substring(
+                    searchHitResponse.getId().indexOf(PRODUCT_PREFIX) + PRODUCT_PREFIX.length());
+            productIds.add(Long.parseLong(productId));
         }
         azzimovSearchResponseParameter.setProductIds(productIds);
 
@@ -64,6 +66,9 @@ public class AzzimovSearchResponseBuilder {
                 if (azzimovAggregationResponse.getName().equals(ProductGuidance.PRODUCT_GUIDANCE_LEVEL1_GUIDANCE)) {
                     guidanceCategoryList.addAll(createCategoryResults(azzimovAggregationResponse));
                 }
+                if (azzimovAggregationResponse.getName().equals(ProductGuidance.PRODUCT_GUIDANCE_PARENT_GUIDANCE)) {
+                    guidanceCategoryList.addAll(createSubCategoryResults(azzimovAggregationResponse));
+                }
                 if (azzimovAggregationResponse.getName().equals(ProductGuidance.PRODUCT_GUIDANCE_ATTRIBUTE_GUIDANCE)) {
                     guidanceFilterList.addAll(createAttributeResults(azzimovAggregationResponse));
                 }
@@ -73,7 +78,6 @@ public class AzzimovSearchResponseBuilder {
         guidance.setGuidanceFilters(guidanceFilterList);
         azzimovSearchResponseParameter.setGuidance(guidance);
         azzimovSearchResponseOut.setAzzimovSearchResponseParameter(azzimovSearchResponseParameter);
-        System.out.println("Results count found = " + azzimovSearchInfo.getCount());
         return azzimovSearchResponseOut;
     }
 
@@ -81,7 +85,7 @@ public class AzzimovSearchResponseBuilder {
     private static Collection<GuidanceCategory> createCategoryResults(AzzimovAggregationResponse azzimovAggregationResponse) {
         Map<String, GuidanceCategory> guidanceCategoryMap = new HashMap<>();
         for (Map.Entry<String, Long> aggEntry : azzimovAggregationResponse.getFieldCountMap().entrySet()) {
-            String[] categoryLabelValuePair = aggEntry.getKey().split("::");
+            String[] categoryLabelValuePair = aggEntry.getKey().split(ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR);
             if (guidanceCategoryMap.containsKey(categoryLabelValuePair[0].trim())) {
                 GuidanceSubCategory guidanceSubCategory = new GuidanceSubCategory();
                 guidanceSubCategory.setCategoryName(categoryLabelValuePair[1].trim());
@@ -107,10 +111,39 @@ public class AzzimovSearchResponseBuilder {
         return guidanceCategoryMap.values();
     }
 
+    private static Collection<GuidanceCategory> createSubCategoryResults(AzzimovAggregationResponse azzimovAggregationResponse) {
+        Map<String, GuidanceCategory> guidanceCategoryMap = new HashMap<>();
+        for (Map.Entry<String, Long> aggEntry : azzimovAggregationResponse.getFieldCountMap().entrySet()) {
+            String[] categoryLabelValuePair = aggEntry.getKey().split(ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR);
+            if (guidanceCategoryMap.containsKey(categoryLabelValuePair[1].trim())) {
+                GuidanceSubCategory guidanceSubCategory = new GuidanceSubCategory();
+                guidanceSubCategory.setCategoryName(categoryLabelValuePair[0].trim());
+                guidanceSubCategory.setCount(aggEntry.getValue());
+                guidanceCategoryMap.get(categoryLabelValuePair[1].trim())
+                        .getGuidanceSubCategories().add(guidanceSubCategory);
+                guidanceCategoryMap.get(categoryLabelValuePair[1].trim())
+                        .setSubCategoryCount(guidanceCategoryMap.get(
+                                categoryLabelValuePair[1].trim()).getSubCategoryCount() + 1);
+            } else {
+                GuidanceSubCategory guidanceSubCategory = new GuidanceSubCategory();
+                guidanceSubCategory.setCategoryName(categoryLabelValuePair[0].trim());
+                guidanceSubCategory.setCount(aggEntry.getValue());
+                GuidanceCategory guidanceCategory = new GuidanceCategory();
+                List<GuidanceSubCategory> guidanceSubCategoryList = new ArrayList<>();
+                guidanceSubCategoryList.add(guidanceSubCategory);
+                guidanceCategory.setGuidanceSubCategories(guidanceSubCategoryList);
+                guidanceCategoryMap.put(categoryLabelValuePair[1].trim(), guidanceCategory);
+                guidanceCategory.setCategoryName(ProductGuidance.PRODUCT_GUIDANCE_OTHER_GUIDANCE);
+                guidanceCategory.setSubCategoryCount(1);
+            }
+        }
+        return guidanceCategoryMap.values();
+    }
+
     private static Collection<GuidanceFilter> createAttributeResults(AzzimovAggregationResponse azzimovAggregationResponse) {
         Map<String, GuidanceFilter> guidanceFiltersMap = new HashMap<>();
         for (Map.Entry<String, Long> aggEntry : azzimovAggregationResponse.getFieldCountMap().entrySet()) {
-            String[] attributeLabelValuePair = aggEntry.getKey().split("::");
+            String[] attributeLabelValuePair = aggEntry.getKey().split(ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR);
             if (guidanceFiltersMap.containsKey(attributeLabelValuePair[0].trim())) {
                 GuidanceFilterValue guidanceFilterValue = new GuidanceFilterValue();
                 guidanceFilterValue.setValue(attributeLabelValuePair[1].trim());

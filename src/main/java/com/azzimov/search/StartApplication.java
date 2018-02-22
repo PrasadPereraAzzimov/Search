@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.azzimov.search.system.spring.AppConfiguration.AGGREGATE_ACTOR;
 import static com.azzimov.search.system.spring.AppConfiguration.FEEDBACK_ACTOR;
 import static com.azzimov.search.system.spring.AppConfiguration.SEARCH_ACTOR;
 
@@ -67,6 +68,15 @@ public class StartApplication {
 
         logger.info("Initializing the search manager router = {}", routerSearch);
         applicationActors.put(SEARCH_ACTOR, routerSearch);
+
+        ActorRef routerAggregation =
+                system.actorOf(FromConfig.getInstance().props(
+                        SpringExtensionIdProvider.SPRING_EXTENSION_ID_PROVIDER.get(system)
+                                .props(AGGREGATE_ACTOR)), AGGREGATE_ACTOR);
+
+        logger.info("Initializing the aggregate manager router = {}", routerAggregation);
+        applicationActors.put(AGGREGATE_ACTOR, routerSearch);
+
         try {
             logger.info("Retrieving learn centroids = {}", LearnCentroidCluster.CENTROID_GUIDANCE_KEY);
             this.learnStatModelService.updateGuidanceLearningModelManager();
