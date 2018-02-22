@@ -64,7 +64,13 @@ public class LearnStatModelService {
         if (azzimovCacheResponse != null) {
             GuidanceModel guidanceModel = azzimovCacheResponse.getObjectType();
             Map<String, Map<FeedbackAttribute, Float>> attributeCentroids = new HashMap<>();
+            if(guidanceModel == null){
+                return null;
+            }
             List<GuidanceModelElement> guidanceModelElementList = guidanceModel.getModelElementList();
+            if(CollectionUtils.isEmpty(guidanceModelElementList)){
+                return null;
+            }
             for (GuidanceModelElement guidanceModelElement : guidanceModelElementList) {
                 List<ModelEntity> modelEntityList = guidanceModelElement.getModelEntityList();
                 String modelKey = guidanceModelElement.getModelKey();
