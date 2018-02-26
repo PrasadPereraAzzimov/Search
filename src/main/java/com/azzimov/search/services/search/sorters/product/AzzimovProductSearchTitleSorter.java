@@ -14,10 +14,11 @@ import static com.azzimov.search.services.search.utils.SearchFieldConstants.retr
 
 /**
  * Created by prasad on 2/1/18.
+ * AzzimovProductSearchTitleSorter sorts products based on title
  */
 public class AzzimovProductSearchTitleSorter extends AzzimovProductSearchSorterCreator {
     public AzzimovProductSearchTitleSorter(ConfigurationHandler configurationHandler) {
-        super(configurationHandler, null);
+        super(configurationHandler);
     }
 
     @Override

@@ -12,6 +12,7 @@ import com.azzimov.search.common.util.config.SystemConfiguration;
 import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.trinity.common.learning.util.CustomDateDeserializer;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.apache.commons.collections4.CollectionUtils;
@@ -48,8 +49,8 @@ public class AzzimovCacheManager {
     }
 
     private AzzimovCentroidCacheKeyListener azzimovCentroidCacheKeyListener;
-    private ExecutorService executorService = CouchbaseExecutor.getInstance();
-    private static ObjectMapper objectMapper = createObjectMapper();
+    private ExecutorService executorService;
+    public static ObjectMapper objectMapper = createObjectMapper();
 
     /**
      * Create all cache related components:
@@ -82,7 +83,8 @@ public class AzzimovCacheManager {
         couchbaseConfiguration.setPassword("");
         CouchbaseConnector.start(couchbaseConfiguration);
         couchbaseConnector = CouchbaseConnector.getInstance();
-        couchbaseExecutor = CouchbaseExecutor.getInstance();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        this.executorService = CouchbaseExecutor.getInstance(objectMapper);
         this.azzimovCentroidCacheKeyListener = new AzzimovCentroidCacheKeyListener(this.learnStatModelService);
         this.couchbaseCacheKeyListenerService = new CouchbaseCacheKeyListenerService(couchbaseConfiguration);
         this.couchbaseCacheKeyListenerService.initCacheListenerManager();
@@ -90,7 +92,6 @@ public class AzzimovCacheManager {
             this.couchbaseCacheKeyListenerService.
                     registerCacheKeyListener(CENTROID_GUIDANCE_KEY, bucket, this.azzimovCentroidCacheKeyListener);
         }
-        this.executorService = CouchbaseExecutor.getInstance();
         return true;
     }
 
@@ -128,7 +129,8 @@ public class AzzimovCacheManager {
 
     private static ObjectMapper createObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
-        SimpleModule simpleModule = new SimpleModule().addDeserializer(DateTime.class,new CustomDateDeserializer());
+        SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addDeserializer(DateTime.class,new CustomDateDeserializer());
         simpleModule.addSerializer(DateTime.class, new CustomDateSerializer());
         objectMapper.registerModule(simpleModule);
         return objectMapper;

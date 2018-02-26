@@ -70,7 +70,7 @@ public class FeedbackPersistManager {
         return feedback.accept(feedbackPersistVisitor);
     }
 
-    public boolean persistFeedback(AzzimovSearchRequest azzimovSearchRequest,
+    public Feedback persistFeedback(AzzimovSearchRequest azzimovSearchRequest,
                                    AzzimovSearchResponse azzimovSearchResponse) throws Exception {
         Set<ProductResult> productResultList = new HashSet<>();
         int index = azzimovSearchRequest.getAzzimovSearchRequestParameters().getResultOffset();
@@ -151,7 +151,7 @@ public class FeedbackPersistManager {
             feedback = feedbackBuilder.build();
         }
         persistFeedback(feedback, azzimovSearchRequest);
-        return true;
+        return feedback;
     }
 
     private static class FeedbackPersistVisitor implements FeedbackVisitor<Boolean> {

@@ -9,13 +9,14 @@ import java.util.List;
 
 /**
  * Created by prasad on 2/1/18.
+ * AzzimovProductSearchTimeSorter sorts products based on product timestamps
  */
 public class AzzimovProductSearchTimeSorter extends AzzimovProductSearchSorterCreator {
     private String sortField;
 
     public AzzimovProductSearchTimeSorter(ConfigurationHandler configurationHandler,
                                           String sortField) {
-        super(configurationHandler, null);
+        super(configurationHandler);
         this.sortField = sortField;
     }
 

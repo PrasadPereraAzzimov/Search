@@ -76,8 +76,7 @@ public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
             // Create custom query sorters that sort the search results if the sorting is specified in search request
             // parameters
             AzzimovProductSearchSorterCreator azzimovProductSearchSorterCreator =
-                    new AzzimovProductSearchSorterCreator(configurationHandler,
-                            azzimovSearchParameters.getLearnCentroidClusterList());
+                    new AzzimovProductSearchSorterCreator(configurationHandler);
             List<AzzimovSorter> azzimovSorterList = new ArrayList<>();
             azzimovSorterList = azzimovProductSearchSorterCreator
                     .createAzzimovSorter(azzimovSearchParameters, azzimovSorterList);

@@ -38,6 +38,7 @@ public class AppConfiguration {
     public static final String FEEDBACK_ACTOR = "router_feedback";
     public static final String SEARCH_ACTOR = "router_search";
     public static final String AGGREGATE_ACTOR = "router_aggregate";
+    public static final String SESSION_LEARN_ACTOR = "router_session_learn";
 
     @Bean
     public ActorSystem actorSystem() {

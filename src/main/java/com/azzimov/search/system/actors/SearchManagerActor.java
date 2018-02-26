@@ -5,9 +5,13 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.pattern.PatternsCS;
 import akka.util.Timeout;
+import com.azzimov.search.common.cache.requests.AzzimovCacheRequest;
+import com.azzimov.search.common.cache.responses.AzzimovCacheResponse;
+import com.azzimov.search.common.cache.service.CacheService;
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
 import com.azzimov.search.common.dto.externals.Product;
+import com.azzimov.search.common.util.config.SearchConfiguration;
 import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
@@ -16,11 +20,14 @@ import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.executors.product.AzzimovProductSearchExecutor;
 import com.azzimov.search.services.search.learn.LearnCentroidCluster;
 import com.azzimov.search.services.search.learn.LearnStatModelService;
+import com.azzimov.search.services.search.learn.SessionCentroidModelCluster;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import com.azzimov.search.services.search.validators.product.AzzimovSearchRequestValidator;
 import com.azzimov.search.system.spring.AppConfiguration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -35,6 +42,7 @@ import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
+import static com.azzimov.search.system.actors.SessionLearningGeneratorActor.DEFAULT_MODEL_KEY;
 import static com.azzimov.search.system.spring.AppConfiguration.SEARCH_ACTOR;
 
 
@@ -98,6 +106,9 @@ public class SearchManagerActor extends AbstractActor {
                             LearnCentroidCluster learnCentroidCluster = retrieveMemberModel(azzimovSearchRequest);
                             if (learnCentroidCluster != null)
                                 learnCentroidClusters.add(learnCentroidCluster);
+                            LearnCentroidCluster sessionLearnCentroidCluster = retrieveSessionModel(azzimovSearchRequest);
+                            if (sessionLearnCentroidCluster != null)
+                                learnCentroidClusters.add(sessionLearnCentroidCluster);
                             azzimovSearchParameters.setLearnCentroidClusterList(learnCentroidClusters);
                             azzimovSearchResponseList =
                                     this.azzimovSearchExecutorMap.get(targetTypes.getKey())
@@ -171,5 +182,40 @@ public class SearchManagerActor extends AbstractActor {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private LearnCentroidCluster retrieveSessionModel(AzzimovSearchRequest azzimovSearchRequest) {
+        String cacheKey = configListener.getConfigurationHandler()
+                .getStringConfig(SearchConfiguration.SESSION_LEVEL_CENTROID_MODEL, DEFAULT_MODEL_KEY) +
+                azzimovSearchRequest.getAzzimovUserRequestParameters().getSessionId();
+        String bucket = azzimovCacheManager.getCouchbaseConfiguration().getBuckets().get(0);
+        AzzimovCacheRequest<SessionCentroidModelCluster> azzimovCacheRequest =
+                new AzzimovCacheRequest<>(bucket, cacheKey);
+        CacheService<SessionCentroidModelCluster> learningModelCacheService  =
+                azzimovCacheManager.getCacheProvider(SessionCentroidModelCluster.class);
+        AzzimovCacheResponse<SessionCentroidModelCluster> azzimovCacheResponse;
+        SessionCentroidModelCluster sessionCentroidModelClusterPrevious = null;
+        try {
+            azzimovCacheResponse = learningModelCacheService.get(azzimovCacheRequest);
+            if (azzimovCacheResponse.getObjectType() != null) {
+                sessionCentroidModelClusterPrevious = azzimovCacheResponse.getObjectType();
+            } else {
+                sessionCentroidModelClusterPrevious = new SessionCentroidModelCluster();
+                Map<String, List<SessionCentroidModelCluster.SessionCentroid>> sessionLearningModelClusterMap = new HashMap<>();
+                sessionCentroidModelClusterPrevious.setSessionLearningModelClusterMap(sessionLearningModelClusterMap);
+                sessionCentroidModelClusterPrevious.setCreationTime(DateTime.now(DateTimeZone.UTC));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+        return sessionCentroidModelClusterPrevious;
     }
 }

@@ -6,7 +6,6 @@ import com.azzimov.search.common.query.AzzimovFunctionScoreQuery;
 import com.azzimov.search.common.query.AzzimovQuery;
 import com.azzimov.search.common.sorters.AzzimovSorter;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
-import com.azzimov.search.services.search.learn.LearnCentroidCluster;
 import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
 import com.azzimov.search.services.search.sorters.AzzimovSorterCreator;
 import java.util.ArrayList;
@@ -19,12 +18,9 @@ import java.util.List;
 public class AzzimovProductSearchSorterCreator extends AzzimovSorterCreator<AzzimovSearchParameters,
         AzzimovSorter, AzzimovSorter, AzzimovQuery, AzzimovFunctionScoreQuery> {
     private ConfigurationHandler configurationHandler;
-    private List<LearnCentroidCluster> learnCentroidClusterList;
 
-    public AzzimovProductSearchSorterCreator(ConfigurationHandler configurationHandler,
-                                             List<LearnCentroidCluster> learnCentroidClusterList) {
+    public AzzimovProductSearchSorterCreator(ConfigurationHandler configurationHandler) {
         this.configurationHandler = configurationHandler;
-        this.learnCentroidClusterList = learnCentroidClusterList;
     }
 
     @Override
@@ -81,7 +77,7 @@ public class AzzimovProductSearchSorterCreator extends AzzimovSorterCreator<Azzi
         switch (sortMode) {
             case RELEVANCE:
                 AzzimovProductSearchCentroidSorter azzimovProductSearchCentroidSorter =
-                        new AzzimovProductSearchCentroidSorter(configurationHandler, learnCentroidClusterList);
+                        new AzzimovProductSearchCentroidSorter(configurationHandler);
                 azzimovFunctionScoreQueryList.addAll(azzimovProductSearchCentroidSorter
                         .createAzzimovQuery(azzimovParameters, azzimovQueryList));
                 break;
@@ -91,9 +87,5 @@ public class AzzimovProductSearchSorterCreator extends AzzimovSorterCreator<Azzi
 
     public ConfigurationHandler getConfigurationHandler() {
         return configurationHandler;
-    }
-
-    public List<LearnCentroidCluster> getLearnStatModelServices() {
-        return learnCentroidClusterList;
     }
 }

@@ -25,6 +25,7 @@ import java.util.Map;
 import static com.azzimov.search.system.spring.AppConfiguration.AGGREGATE_ACTOR;
 import static com.azzimov.search.system.spring.AppConfiguration.FEEDBACK_ACTOR;
 import static com.azzimov.search.system.spring.AppConfiguration.SEARCH_ACTOR;
+import static com.azzimov.search.system.spring.AppConfiguration.SESSION_LEARN_ACTOR;
 
 /**
  * Created by RahulGupta on 2017-12-21.
@@ -77,6 +78,12 @@ public class StartApplication {
         logger.info("Initializing the aggregate manager router = {}", routerAggregation);
         applicationActors.put(AGGREGATE_ACTOR, routerSearch);
 
+        ActorRef routerSessionLearn =
+                system.actorOf(FromConfig.getInstance().props(
+                        SpringExtensionIdProvider.SPRING_EXTENSION_ID_PROVIDER.get(system)
+                                .props(SESSION_LEARN_ACTOR)), SESSION_LEARN_ACTOR);
+        logger.info("Initializing the session learn manager router = {}", routerAggregation);
+        applicationActors.put(SESSION_LEARN_ACTOR, routerSessionLearn);
         try {
             logger.info("Retrieving learn centroids = {}", LearnCentroidCluster.CENTROID_GUIDANCE_KEY);
             this.learnStatModelService.updateGuidanceLearningModelManager();

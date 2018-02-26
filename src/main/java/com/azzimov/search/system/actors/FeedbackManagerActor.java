@@ -1,10 +1,14 @@
 package com.azzimov.search.system.actors;
 
 import akka.actor.AbstractActor;
+import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
+import com.azzimov.search.common.dto.internals.feedback.Feedback;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
 import com.azzimov.search.services.feedback.FeedbackPersistManager;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
+import com.azzimov.search.system.spring.AppConfiguration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -21,13 +25,15 @@ import static com.azzimov.search.system.spring.AppConfiguration.FEEDBACK_ACTOR;
 public class FeedbackManagerActor extends AbstractActor {
     private static final Logger logger = LogManager.getLogger(FeedbackManagerActor.class);
     private SearchExecutorService searchExecutorService;
+    private AppConfiguration appConfiguration;
 
     /**
      * Constructor for FeedbackManagerActor
      * @param searchExecutorService search executor service
      */
-    public FeedbackManagerActor(SearchExecutorService searchExecutorService) {
+    public FeedbackManagerActor(SearchExecutorService searchExecutorService, AppConfiguration appConfiguration) {
         this.searchExecutorService = searchExecutorService;
+        this.appConfiguration = appConfiguration;
     }
 
     @Override
@@ -45,11 +51,20 @@ public class FeedbackManagerActor extends AbstractActor {
                             ConfigurationHandler.getConfigurationHandler());
                     if (azzimovFeedbackPersistRequest.getFeedback() != null) {
                         feedbackPersistManager.persistFeedback(azzimovFeedbackPersistRequest.getFeedback(), null);
+                        sendSessionSearchFeedback(azzimovFeedbackPersistRequest.getFeedback());
                     } else {
-                        feedbackPersistManager.persistFeedback(azzimovFeedbackPersistRequest.getAzzimovSearchRequest(),
+                        Feedback feedback = feedbackPersistManager
+                                .persistFeedback(azzimovFeedbackPersistRequest.getAzzimovSearchRequest(),
                                 azzimovFeedbackPersistRequest.getAzzimovSearchResponse());
+                        sendSessionSearchFeedback(feedback);
                     }
 
                 }).build();
+    }
+
+    private void sendSessionSearchFeedback(Feedback feedback) {
+        ActorSelection selection = appConfiguration.actorSystem().actorSelection("/user/" + AppConfiguration.SESSION_LEARN_ACTOR);
+        logger.info("Sending feedback request to  {}", selection);
+        selection.tell(feedback, ActorRef.noSender());
     }
 }

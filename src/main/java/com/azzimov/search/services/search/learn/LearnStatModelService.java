@@ -63,45 +63,47 @@ public class LearnStatModelService {
         }
         if (azzimovCacheResponse != null) {
             GuidanceModel guidanceModel = azzimovCacheResponse.getObjectType();
-            Map<String, Map<FeedbackAttribute, Float>> attributeCentroids = new HashMap<>();
-            List<GuidanceModelElement> guidanceModelElementList = guidanceModel.getModelElementList();
-            for (GuidanceModelElement guidanceModelElement : guidanceModelElementList) {
-                List<ModelEntity> modelEntityList = guidanceModelElement.getModelEntityList();
-                String modelKey = guidanceModelElement.getModelKey();
-                attributeCentroids.put(modelKey, new HashMap<>());
-                double sumValue = 0.0;
-                for (ModelEntity modelEntity : modelEntityList) {
-                    sumValue += Float.valueOf(String.valueOf(modelEntity.getValue())) *
-                            Float.valueOf(String.valueOf(modelEntity.getFactor()));
-                }
-                // we adjust the total weights to be between range [0.1 - 0.01]
-                int maxFactor  = (int) Math.log10(guidanceLearningMaxCoefficient);
-                double curFactor = Math.log10(sumValue);
-                double factor = Math.pow(10, (int)(maxFactor - curFactor));
-                //log.debug("sumValue = {} curFactor = {} factor = {}", sumValue, curFactor, factor);
-                for (ModelEntity modelEntity : modelEntityList) {
-                    String attributeString = modelEntity.getLabel();
-                    String[] attributeEntries = attributeString.split("::");
-                    FeedbackAttribute feedbackAttribute = new FeedbackAttribute(
-                            new FeedbackAttributeLabel(attributeEntries[0].trim()), 0);
-                    if (attributeEntries.length <= 2) {
-                        FeedbackAttributeStringValue feedbackAttributeStringValue =
-                                new FeedbackAttributeStringValue(attributeEntries[1].trim());
-                        feedbackAttribute.setFeedbackAttributeStringValue(feedbackAttributeStringValue);
-                    } else {
-                        Double value = Double.valueOf(attributeEntries[1].trim());
-                        FeedbackAttributeNumericValue feedbackAttributeNumericValue =
-                                new FeedbackAttributeNumericValue(value);
-                        feedbackAttribute.setFeedbackAttributeNumericValue(feedbackAttributeNumericValue);
-                        feedbackAttribute.setUnit(attributeEntries[2].trim());
+            if (guidanceModel != null) {
+                Map<String, Map<FeedbackAttribute, Float>> attributeCentroids = new HashMap<>();
+                List<GuidanceModelElement> guidanceModelElementList = guidanceModel.getModelElementList();
+                for (GuidanceModelElement guidanceModelElement : guidanceModelElementList) {
+                    List<ModelEntity> modelEntityList = guidanceModelElement.getModelEntityList();
+                    String modelKey = guidanceModelElement.getModelKey();
+                    attributeCentroids.put(modelKey, new HashMap<>());
+                    double sumValue = 0.0;
+                    for (ModelEntity modelEntity : modelEntityList) {
+                        sumValue += Float.valueOf(String.valueOf(modelEntity.getValue())) *
+                                Float.valueOf(String.valueOf(modelEntity.getFactor()));
                     }
-                    attributeCentroids.get(modelKey).put(feedbackAttribute,
-                            Float.valueOf(String.valueOf(modelEntity.getValue())) *
-                                    Float.valueOf(String.valueOf(modelEntity.getFactor())) * (float) factor);
+                    // we adjust the total weights to be between range [0.1 - 0.01]
+                    int maxFactor = (int) Math.log10(guidanceLearningMaxCoefficient);
+                    double curFactor = Math.log10(sumValue);
+                    double factor = Math.pow(10, (int) (maxFactor - curFactor));
+                    //log.debug("sumValue = {} curFactor = {} factor = {}", sumValue, curFactor, factor);
+                    for (ModelEntity modelEntity : modelEntityList) {
+                        String attributeString = modelEntity.getLabel();
+                        String[] attributeEntries = attributeString.split("::");
+                        FeedbackAttribute feedbackAttribute = new FeedbackAttribute(
+                                new FeedbackAttributeLabel(attributeEntries[0].trim()), 0);
+                        if (attributeEntries.length <= 2) {
+                            FeedbackAttributeStringValue feedbackAttributeStringValue =
+                                    new FeedbackAttributeStringValue(attributeEntries[1].trim());
+                            feedbackAttribute.setFeedbackAttributeStringValue(feedbackAttributeStringValue);
+                        } else {
+                            Double value = Double.valueOf(attributeEntries[1].trim());
+                            FeedbackAttributeNumericValue feedbackAttributeNumericValue =
+                                    new FeedbackAttributeNumericValue(value);
+                            feedbackAttribute.setFeedbackAttributeNumericValue(feedbackAttributeNumericValue);
+                            feedbackAttribute.setUnit(attributeEntries[2].trim());
+                        }
+                        attributeCentroids.get(modelKey).put(feedbackAttribute,
+                                Float.valueOf(String.valueOf(modelEntity.getValue())) *
+                                        Float.valueOf(String.valueOf(modelEntity.getFactor())) * (float) factor);
+                    }
                 }
+                logger.info("Updating the guidance based centroid model ...");
+                guidanceLearnCentroidCluster.setAttributeCentroids(attributeCentroids);
             }
-            logger.info("Updating the guidance based centroid model ...");
-            guidanceLearnCentroidCluster.setAttributeCentroids(attributeCentroids);
         }
         return guidanceLearnCentroidCluster;
     }
