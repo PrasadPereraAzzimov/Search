@@ -126,7 +126,7 @@ public class SearchManagerActor extends AbstractActor {
                             logger.info("Returning search response = {}",
                                     azzimovSearchResponseList.get(0).getAzzimovSearchInfo().getCount());
                         }
-                        getSender().tell(azzimovSearchResponseList, self());
+                        getSender().tell(azzimovSearchResponseList.get(0), self());
                         logger.info("sending response to = {} {} {}", getContext().sender(), getSender(), sender());
                         persistSearchFeedback(azzimovSearchRequest, azzimovSearchResponseList.get(0));
                     } catch (InvalidParameterException invalidParameterException) {
