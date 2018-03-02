@@ -5,7 +5,7 @@ import com.azzimov.search.common.dto.internals.feedback.FeedbackAttribute;
 import com.azzimov.search.system.actors.SessionLearningGeneratorActor;
 import com.google.common.collect.Maps;
 import org.joda.time.DateTime;
-
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -44,7 +44,7 @@ public class SessionCentroidModelCluster extends LearnCentroidCluster {
     /**
      * Session Learning Entry that represents an entry for the session learning
      */
-    public static class SessionCentroidEntry {
+    public static class SessionCentroidEntry implements Serializable {
         private FeedbackAttribute feedbackAttribute;
         private SessionLearningGeneratorActor.SessionEntryType sessionEntryType;
         private float count;
@@ -93,7 +93,7 @@ public class SessionCentroidModelCluster extends LearnCentroidCluster {
         }
     }
 
-    public static class SessionCentroid implements Comparator<SessionCentroid> {
+    public static class SessionCentroid implements Comparator<SessionCentroid>, Serializable {
         private Map<String, SessionCentroidEntry> keySessionLearningEntryMap = new HashMap<>();
         private Map<String, SessionCentroidEntry> sessionLearningEntryMap = new HashMap<>();
         private String clusterKey = "";

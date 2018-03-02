@@ -29,7 +29,7 @@ import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALU
 public class AzzimovSearchResponseBuilder {
     private AzzimovSearchResponse azzimovSearchResponse;
     private AzzimovSearchRequest azzimovSearchRequest;
-    private static final String PRODUCT_PREFIX = "prod::";
+    public static final String PRODUCT_PREFIX = "prod::";
 
     public AzzimovSearchResponseBuilder(AzzimovSearchResponse azzimovSearchResponse,
                                         AzzimovSearchRequest azzimovSearchRequest) {

@@ -4,10 +4,25 @@ import akka.actor.AbstractActor;
 import com.azzimov.search.common.cache.requests.AzzimovCacheRequest;
 import com.azzimov.search.common.cache.responses.AzzimovCacheResponse;
 import com.azzimov.search.common.cache.service.CacheService;
+import com.azzimov.search.common.dto.GeoLocation;
+import com.azzimov.search.common.dto.Language;
+import com.azzimov.search.common.dto.LanguageCode;
+import com.azzimov.search.common.dto.communications.requests.AzzimovUserRequestParameters;
+import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
+import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequestParameters;
+import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
+import com.azzimov.search.common.dto.externals.Attribute;
+import com.azzimov.search.common.dto.externals.Guidance;
+import com.azzimov.search.common.dto.externals.GuidanceFilter;
+import com.azzimov.search.common.dto.externals.GuidanceFilterValue;
+import com.azzimov.search.common.dto.externals.Product;
 import com.azzimov.search.common.dto.externals.ProductGuidance;
 import com.azzimov.search.common.dto.internals.ExtendedProduct;
 import com.azzimov.search.common.dto.internals.feedback.Feedback;
 import com.azzimov.search.common.dto.internals.feedback.FeedbackAttribute;
+import com.azzimov.search.common.dto.internals.feedback.FeedbackAttributeLabel;
+import com.azzimov.search.common.dto.internals.feedback.FeedbackAttributeNumericValue;
+import com.azzimov.search.common.dto.internals.feedback.FeedbackAttributeStringValue;
 import com.azzimov.search.common.dto.internals.feedback.GuidanceAttributeEntry;
 import com.azzimov.search.common.dto.internals.feedback.GuidanceFeedback;
 import com.azzimov.search.common.dto.internals.feedback.ProductFeedback;
@@ -21,8 +36,14 @@ import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SearchConfiguration;
 import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
+import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
+import com.azzimov.search.services.search.executors.AzzimovAggregateExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
+import com.azzimov.search.services.search.executors.product.AzzimovProductAggregateExecutorCreator;
 import com.azzimov.search.services.search.learn.SessionCentroidModelCluster;
+import com.azzimov.search.services.search.params.product.AzzimovSearchParameters;
+import com.azzimov.search.services.search.validators.product.AzzimovSearchRequestValidator;
+import io.netty.util.internal.StringUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
@@ -38,7 +59,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
+import static com.azzimov.search.services.search.reponses.AzzimovSearchResponseBuilder.PRODUCT_PREFIX;
+import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALUE_TEXT;
 import static com.azzimov.search.system.spring.AppConfiguration.SESSION_LEARN_ACTOR;
 
 /**
@@ -52,41 +76,13 @@ public class SessionLearningGeneratorActor extends AbstractActor {
     // feedback models. we temporarily write these session models to the cache and make them expire with time.
     private ConfigurationHandler configurationHandler;
     private AzzimovCacheManager azzimovCacheManager;
+    private Map<SessionEntryType, Map<FeedbackAttribute, Float>> categoryAttributeStatistics = new HashMap<>();
     private static final Logger log = LogManager.getLogger(SessionLearningGeneratorActor.class);
     private SearchExecutorService searchExecutorService;
     public static final String SESSION_LEARNING_DEFAULT_CLUSTER_KEY = "ALL";
     public static final String DEFAULT_MODEL_KEY = "session-learning-centroid-model";
-    /*public static final double SESSION_LEARNING_DEFAULT_CLUSTER_COEFFICIENT =
-            conf.getDoubleConfig("search.session.learning.default.cluster.coefficient", 0.1);
-    private static final int GUIDANCE_FACTOR = conf.getIntConfig("search.session.learning.guidance.factor", 5);
-    private static final int PRODUCT_FACTOR = conf.getIntConfig("search.session.learning.product.factor", 2);
-    private static final double WEIGHT_RATIO_LIMIT =
-            conf.getDoubleConfig("search.session.learning.cluster.weight.threshold.ratio", 8.0);
-    private static final double TIME_DECAY_FACTOR = conf.getDoubleConfig("search.session.learning.time.decay.factor", 600.0);
 
-    private static final double ATTRIBUTE_FR_LEVEL1_MAX_THRESHOLD =
-            conf.getDoubleConfig("search.session.learning.attribute.level1.frequency.max.threshold", 0.01);
-    private static final double ATTRIBUTE_FR_LEVEL1_MIN_THRESHOLD =
-            conf.getDoubleConfig("search.session.learning.attribute.level1.frequency.min.threshold", 0.0005);
-    private static final double ATTRIBUTE_FR_OTHER_MAX_THRESHOLD =
-            conf.getDoubleConfig("search.session.learning.attribute.other.frequency.max.threshold", 0.01);
-    private static final double ATTRIBUTE_FR_OTHER_MIN_THRESHOLD =
-            conf.getDoubleConfig("search.session.learning.attribute.other.frequency.min.threshold", 0.0005);
 
-    private static final double CATEGORY_FR_LEVEL1_MAX_THRESHOLD =
-            conf.getDoubleConfig("search.session.learning.category.level1.frequency.max.threshold", 0.01);
-    private static final double CATEGORY_FR_LEVEL1_MIN_THRESHOLD =
-            conf.getDoubleConfig("search.session.learning.category.level1.frequency.min.threshold", 0.0005);
-    private static final double CATEGORY_FR_OTHER_MAX_THRESHOLD =
-            conf.getDoubleConfig("search.session.learning.category.other.frequency.max.threshold", 0.01);
-    private static final double CATEGORY_FR_OTHER_MIN_THRESHOLD =
-            conf.getDoubleConfig("search.session.learning.category.other.frequency.min.threshold", 0.0005);
-
-    private static final double SESSION_LEARNING_CLUSTER_MAX_WEIGHT =
-            conf.getDoubleConfig("search.session.learning.cluster.max.weight", 0.01);
-    private static final int SESSION_LEARNING_MODEL_PERSIST_TIME =
-            conf.getIntConfig("search.session.learning.model.persist.period", 3600);
-*/
     public SessionLearningGeneratorActor(AzzimovCacheManager azzimovCacheManager,
                                          SearchExecutorService searchExecutorService,
                                          ConfigListener configListener) {
@@ -98,12 +94,14 @@ public class SessionLearningGeneratorActor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(Feedback.class, this::updateSessionModel).build();
+                .match(AzzimovFeedbackPersistRequest.class, this::updateSessionModel).build();
     }
 
     @Override
     public void preStart() {
         log.info("Starting the session learning manager {} {}", getSelf(), getContext().props());
+        retrieveAttributeStatistics();
+        log.info("Retrieved relevant attributes for learning manager {}", getSelf());
     }
 
 
@@ -116,7 +114,8 @@ public class SessionLearningGeneratorActor extends AbstractActor {
         ATTRIBUTE_OTHERS
     }
 
-    private void updateSessionModel(Feedback feedback) throws Exception {
+    private void updateSessionModel(AzzimovFeedbackPersistRequest azzimovFeedbackPersistRequest) throws Exception {
+        Feedback feedback = azzimovFeedbackPersistRequest.getFeedback();
         String cacheKey = configurationHandler
                 .getStringConfig(SearchConfiguration.SESSION_LEVEL_CENTROID_MODEL, DEFAULT_MODEL_KEY) +
                 feedback.getSessionId();
@@ -124,8 +123,8 @@ public class SessionLearningGeneratorActor extends AbstractActor {
         SessionCentroidModelCluster sessionCentroidModelClusterPrevious = retrieveSessionModel(cacheKey);
         SessionCentroidModelCluster sessionCentroidModelCluster = new SessionCentroidModelCluster();
         SessionLearningRefinementFeedbackVisitor sessionLearningFeedbackVisitor =
-                new SessionLearningRefinementFeedbackVisitor(this.searchExecutorService,
-                         this.configurationHandler);
+                new SessionLearningRefinementFeedbackVisitor(this.searchExecutorService, this.configurationHandler,
+                        this, azzimovFeedbackPersistRequest);
         SessionLearningQueryFeedbackVisitor sessionLearningQueryFeedbackVisitor =
                 new SessionLearningQueryFeedbackVisitor(sessionCentroidModelClusterPrevious);
         // retrieve all the refinements from the feedback
@@ -149,15 +148,15 @@ public class SessionLearningGeneratorActor extends AbstractActor {
                 String sessionLearningEntryKey = sessionCentroidEntry
                         .getFeedbackAttribute().getFeedbackAttributeLabel().getLabel();
                 if (sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue() != null &&
-                !sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue().getStrValue().isEmpty()) {
+                        !sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue().getStrValue().isEmpty()) {
                     sessionLearningEntryKey += ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
                             sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue().getStrValue();
                 } else {
                     sessionLearningEntryKey += ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
                             sessionCentroidEntry.getFeedbackAttribute()
                                     .getFeedbackAttributeNumericValue().getNumericValue()
-                    + ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
-                    sessionCentroidEntry.getFeedbackAttribute().getUnit();
+                            + ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
+                            sessionCentroidEntry.getFeedbackAttribute().getUnit();
                 }
 
                 if (sessionCentroidEntry.getSessionEntryType() == SessionEntryType.CATEGORY_LEVEL1 ||
@@ -193,7 +192,7 @@ public class SessionLearningGeneratorActor extends AbstractActor {
                         sessionCentroidEntry.getFeedbackAttribute()
                                 .getFeedbackAttributeNumericValue().getNumericValue()
                         + ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
-                sessionCentroidEntry.getFeedbackAttribute().getUnit();
+                        sessionCentroidEntry.getFeedbackAttribute().getUnit();
             }
             if (sessionCentroidEntry.getSessionEntryType() != SessionEntryType.CATEGORY_LEVEL1 &&
                     sessionCentroidEntry.getSessionEntryType() != SessionEntryType.CATEGORY_OTHERS) {
@@ -214,7 +213,7 @@ public class SessionLearningGeneratorActor extends AbstractActor {
                 new AzzimovCacheRequest<>(bucket, cacheKey);
         azzimovCacheRequest.setExpiration(1000);
         azzimovCacheRequest.setObjectType(sessionCentroidModelClusterNext);
-        CacheService<SessionCentroidModelCluster> learningModelCacheService  =
+        CacheService<SessionCentroidModelCluster> learningModelCacheService =
                 azzimovCacheManager.getCacheProvider(SessionCentroidModelCluster.class);
         learningModelCacheService.add(azzimovCacheRequest);
     }
@@ -231,9 +230,9 @@ public class SessionLearningGeneratorActor extends AbstractActor {
         String bucket = azzimovCacheManager.getCouchbaseConfiguration().getBuckets().get(0);
         AzzimovCacheRequest<SessionCentroidModelCluster> azzimovCacheRequest =
                 new AzzimovCacheRequest<>(bucket, cacheKey);
-        CacheService<SessionCentroidModelCluster> learningModelCacheService  =
+        CacheService<SessionCentroidModelCluster> learningModelCacheService =
                 azzimovCacheManager.getCacheProvider(SessionCentroidModelCluster.class);
-        AzzimovCacheResponse<SessionCentroidModelCluster> azzimovCacheResponse  = learningModelCacheService.get(azzimovCacheRequest);
+        AzzimovCacheResponse<SessionCentroidModelCluster> azzimovCacheResponse = learningModelCacheService.get(azzimovCacheRequest);
         SessionCentroidModelCluster sessionCentroidModelClusterPrevious;
         if (azzimovCacheResponse.getObjectType() != null) {
             sessionCentroidModelClusterPrevious = azzimovCacheResponse.getObjectType();
@@ -312,7 +311,7 @@ public class SessionLearningGeneratorActor extends AbstractActor {
     private SessionCentroidModelCluster updatePreviousModel(SessionCentroidModelCluster sessionCentroidModelCluster) {
         DateTime dateTime = sessionCentroidModelCluster.getCreationTime().toDateTime(DateTimeZone.UTC);
         double timeDecayFactor = configurationHandler.
-                getDoubleConfig(SearchConfiguration.SESSION_LEVEL_CENTROID_DECAY, 600.0);
+                getIntConfig(SearchConfiguration.SESSION_LEVEL_CENTROID_DECAY, 600);
         double decayFactor = Math.exp((dateTime.getSecondOfDay() - DateTime.now(DateTimeZone.UTC).getSecondOfDay())
                 / timeDecayFactor);
         for (Map.Entry<String, List<SessionCentroidModelCluster.SessionCentroid>> entry :
@@ -359,7 +358,6 @@ public class SessionLearningGeneratorActor extends AbstractActor {
                         getIntConfig(SearchConfiguration.SESSION_LEVEL_PRODUCT_FACTOR, 2);
                 weight = weight / Math.max(1, sessionCentroid.getSessionLearningEntryMap().size() - 1);
                 if (weight > 0.0 && max / weight >= weightRatioLimit) {
-                    System.out.println("-------> removing cluster=" + sessionCentroid.getClusterKey());
                     clusterIterator.remove();
                 }
             }
@@ -409,15 +407,127 @@ public class SessionLearningGeneratorActor extends AbstractActor {
         return sessionCentroidModelCluster;
     }
 
+    public void retrieveAttributeStatistics() {
+        AzzimovAggregateExecutor azzimovAggregateExecutor = new AzzimovProductAggregateExecutorCreator(
+                configurationHandler,
+                searchExecutorService,
+                azzimovCacheManager);
+
+        double maxAttributeFr = configurationHandler.
+                getDoubleConfig(SearchConfiguration.SESSION_ATTRIBUTE_MAX_FREQUENT, 0.05);
+        double minAttributeFr = configurationHandler.
+                getDoubleConfig(SearchConfiguration.SESSION_ATTRIBUTE_MIN_FREQUENT, 0.0005);
+        List<AzzimovSearchParameters> azzimovSearchParametersList = new ArrayList<>();
+        AzzimovSearchRequestValidator azzimovSearchRequestValidator =
+                new AzzimovSearchRequestValidator(this.configurationHandler);
+        AzzimovSearchRequest azzimovSearchRequest = createInternalSearchRequest();
+        AzzimovSearchParameters azzimovSearchParameters = azzimovSearchRequestValidator
+                .validateRequest(azzimovSearchRequest);
+        azzimovSearchParametersList.add(azzimovSearchParameters);
+        try {
+            List<AzzimovSearchResponse> azzimovSearchResponseList =
+                    azzimovAggregateExecutor.aggregate(azzimovSearchParametersList);
+            Guidance guidance = azzimovSearchResponseList.get(0).getAzzimovSearchResponseParameter().getGuidance();
+            long totalDocs = azzimovSearchResponseList.get(0).getAzzimovSearchInfo().getCount();
+            // Lets calculate fr stats and put in map
+            categoryAttributeStatistics.put(SessionEntryType.ATTRIBUTE_OTHERS,
+                    new TreeMap<>((f1, f2) -> {
+                        if (!f1.getFeedbackAttributeLabel().getLabel()
+                                .equals(f2.getFeedbackAttributeLabel().getLabel())) {
+                            return f1.getFeedbackAttributeLabel().getLabel()
+                                    .compareTo(f2.getFeedbackAttributeLabel().getLabel());
+                        } else {
+                            if (f1.getFeedbackAttributeStringValue() != null &&
+                                    f2.getFeedbackAttributeStringValue() != null) {
+                                return f1.getFeedbackAttributeStringValue().getStrValue()
+                                        .compareTo(f2.getFeedbackAttributeStringValue().getStrValue());
+                            } else if (f1.getFeedbackAttributeNumericValue() != null &&
+                                    f2.getFeedbackAttributeNumericValue() != null) {
+                                return Double.valueOf(f1.getFeedbackAttributeNumericValue().getNumericValue())
+                                        .compareTo(f2.getFeedbackAttributeNumericValue().getNumericValue());
+                            } else {
+                                return 1;
+                            }
+                        }
+                    }));
+            for (GuidanceFilter guidanceFilter : guidance.getGuidanceFilters()) {
+                FeedbackAttributeLabel feedbackAttributeLabel = new FeedbackAttributeLabel(guidanceFilter.getLabel());
+                String filterType = guidanceFilter.getFilterType();
+                for (GuidanceFilterValue guidanceFilterValue : guidanceFilter.getGuidanceFilterValues()) {
+                    FeedbackAttribute feedbackAttribute = new FeedbackAttribute(feedbackAttributeLabel, 0);
+                    String filterValue = guidanceFilterValue.getValue();
+                    long filterCount = guidanceFilterValue.getValueCount();
+                    if (!filterType.equals(VALUE_TEXT)) {
+                        try {
+                            double attributeNumValue = Double.parseDouble(filterValue);
+                            FeedbackAttributeNumericValue feedbackAttributeNumericValue =
+                                    new FeedbackAttributeNumericValue(attributeNumValue);
+                            feedbackAttribute.setFeedbackAttributeNumericValue(feedbackAttributeNumericValue);
+                        } catch (NumberFormatException e) {
+                            log.warn("Wrong type of filter: number could not be parsed : " + filterValue);
+                            FeedbackAttributeStringValue feedbackAttributeStringValue =
+                                    new FeedbackAttributeStringValue(filterValue);
+                            feedbackAttribute.setFeedbackAttributeStringValue(feedbackAttributeStringValue);
+                            feedbackAttribute.setUnit(filterType);
+                        }
+                        feedbackAttribute.setUnit(filterType);
+
+                    } else {
+                        FeedbackAttributeStringValue feedbackAttributeStringValue =
+                                new FeedbackAttributeStringValue(filterValue);
+                        feedbackAttribute.setFeedbackAttributeStringValue(feedbackAttributeStringValue);
+                        feedbackAttribute.setUnit(filterType);
+                    }
+                    float fr = (float) filterCount / totalDocs;
+                    if (fr > minAttributeFr && fr < maxAttributeFr)
+                        categoryAttributeStatistics.get(SessionEntryType.ATTRIBUTE_OTHERS).put(feedbackAttribute, fr);
+                }
+            }
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private AzzimovSearchRequest createInternalSearchRequest() {
+        AzzimovSearchRequest azzimovSearchRequest = new AzzimovSearchRequest();
+        AzzimovSearchRequestParameters azzimovSearchRequestParameters = new AzzimovSearchRequestParameters();
+        List<String> targetDocs = new ArrayList<>();
+        targetDocs.add(Product.PRODUCT_EXTERNAL_NAME);
+        azzimovSearchRequestParameters.setDocumentTypes(targetDocs);
+        azzimovSearchRequestParameters.setQuery(StringUtil.EMPTY_STRING);
+        azzimovSearchRequestParameters.setResultsPerPage(1);
+        azzimovSearchRequestParameters.setResultOffset(0);
+        azzimovSearchRequestParameters.setLanguage(new Language(LanguageCode.EN_US));
+        azzimovSearchRequestParameters.setAzzimovRequestFilters(new ArrayList<>());
+        AzzimovUserRequestParameters azzimovUserRequestParameters = new AzzimovUserRequestParameters();
+        azzimovUserRequestParameters.setBrowserDevice("Device");
+        azzimovUserRequestParameters.setGeoLocation(new GeoLocation(1.0, 1.0));
+        azzimovUserRequestParameters.setMemberId("member_default");
+        azzimovUserRequestParameters.setRequestId("request_id");
+        azzimovUserRequestParameters.setSessionId("session_id");
+        azzimovUserRequestParameters.setUserType("user_default");
+        azzimovSearchRequest.setAzzimovSearchRequestParameters(azzimovSearchRequestParameters);
+        azzimovSearchRequest.setAzzimovUserRequestParameters(azzimovUserRequestParameters);
+        return azzimovSearchRequest;
+    }
+
     private static class SessionLearningRefinementFeedbackVisitor
             implements FeedbackVisitor<List<SessionCentroidModelCluster.SessionCentroidEntry>> {
         private SearchExecutorService searchExecutorService;
         private ConfigurationHandler configurationHandler;
+        private SessionLearningGeneratorActor sessionLearningGeneratorActor;
 
         public SessionLearningRefinementFeedbackVisitor(SearchExecutorService searchExecutorService,
-                                                        ConfigurationHandler configurationHandler) {
+                                                        ConfigurationHandler configurationHandler,
+                                                        SessionLearningGeneratorActor sessionLearningGeneratorActor,
+                                                        AzzimovFeedbackPersistRequest azzimovFeedbackPersistRequest) {
             this.searchExecutorService = searchExecutorService;
             this.configurationHandler = configurationHandler;
+            this.sessionLearningGeneratorActor = sessionLearningGeneratorActor;
         }
 
         @Override
@@ -430,61 +540,40 @@ public class SessionLearningGeneratorActor extends AbstractActor {
         public List<SessionCentroidModelCluster.SessionCentroidEntry> visit(ProductFeedback productFeedback) throws Exception {
             List<SessionCentroidModelCluster.SessionCentroidEntry> sessionCentroidEntryList = new ArrayList<>();
             // When the feedback is product view type, retrieve the product dto, specially the categories/attributes
-            /*long productId = productFeedback.getProductId();
+            long productId = productFeedback.getProductId();
             ExtendedProduct extendedProduct = retrieveProductViewed(productId);
-            ExtendedOtherGuidance guidanceCategories = extendedProduct.
-                    getExtendedGuidance().getExtendedOtherGuidance();
-
-            ExtendedGuidanceAttribute guidanceAttributes = extendedProduct.getExtendedGuidance().getExtendedGuidanceAttribute();
             com.azzimov.search.common.dto.Language language = productFeedback.getLanguage();
-            List<SessionCentroidEntry> sessionCentroidEntryList = new ArrayList<>();
+            Product product = new Product();
+            List<ExtendedProduct> extendedProductList = new ArrayList<>();
+            extendedProductList.add(extendedProduct);
 
-            if (guidanceCategories.getEnglish().containsKey(language.getElasticSearchLanguage())) {
-                List<String> roots = guidanceCategories.getRoots().get(language.getElasticSearchLanguage());
-                for (String root : roots) {
-                    GuidanceEntry guidanceEntry = new GuidanceEntry(root);
-                    if (validateRefinementEntry(SessionEntryType.CATEGORY_LEVEL1,
-                            guidanceEntry,
-                            CATEGORY_FR_LEVEL1_MAX_THRESHOLD,
-                            CATEGORY_FR_LEVEL1_MIN_THRESHOLD)) {
-                        SessionCentroidEntry sessionLearningEntry = new SessionCentroidEntry();
-                        sessionLearningEntry.setGuidanceEntry(guidanceEntry);
-                        sessionLearningEntry.setSessionEntryType(SessionEntryType.CATEGORY_LEVEL1);
-                        sessionCentroidEntryList.add(sessionLearningEntry);
+            List<Product> productList = product.toExternal(extendedProductList, language);
+            product = productList.get(0);
+            List<Attribute> attributeList = product.getAttributes();
+            for (Attribute attribute : attributeList) {
+                if (attribute.getLabel() != null && !attribute.getLabel().isEmpty()) {
+                    FeedbackAttributeLabel feedbackAttributeLabel = new FeedbackAttributeLabel(attribute.getLabel());
+                    FeedbackAttribute feedbackAttribute = new FeedbackAttribute(feedbackAttributeLabel, attribute.getId());
+                    if (attribute.getStrValue() != null && !attribute.getStrValue().isEmpty()) {
+                        FeedbackAttributeStringValue feedbackAttributeStringValue =
+                                new FeedbackAttributeStringValue(attribute.getStrValue());
+                        feedbackAttribute.setFeedbackAttributeStringValue(feedbackAttributeStringValue);
+                    } else {
+                        FeedbackAttributeNumericValue feedbackAttributeNumericValue =
+                                new FeedbackAttributeNumericValue(attribute.getNumValue());
+                        feedbackAttribute.setUnit(attribute.getUnit());
+                        feedbackAttribute.setFeedbackAttributeNumericValue(feedbackAttributeNumericValue);
+
                     }
-                }
-            }
-            if (guidanceCategories.getOthers().containsKey(language.getElasticSearchLanguage())) {
-                List<String> others = guidanceCategories.getOthers().get(language.getElasticSearchLanguage());
-                for (String other : others) {
-                    GuidanceEntry guidanceEntry = new GuidanceEntry(other);
-                    if (validateRefinementEntry(SessionEntryType.CATEGORY_OTHERS,
-                            guidanceEntry,
-                            CATEGORY_FR_OTHER_MAX_THRESHOLD,
-                            CATEGORY_FR_OTHER_MIN_THRESHOLD)) {
-                        SessionCentroidEntry sessionLearningEntry = new SessionCentroidEntry();
-                        sessionLearningEntry.setGuidanceEntry(guidanceEntry);
-                        sessionLearningEntry.setSessionEntryType(SessionEntryType.CATEGORY_OTHERS);
-                        sessionCentroidEntryList.add(sessionLearningEntry);
-                    }
-                }
-            }
-            if (guidanceAttributes.getOthers().containsKey(language.getElasticSearchLanguage())) {
-                List<String> others = guidanceAttributes.getOthers().get(language.getElasticSearchLanguage());
-                for (String other : others) {
-                    GuidanceEntry guidanceEntry = new GuidanceEntry(other);
-                    if (validateRefinementEntry(SessionEntryType.ATTRIBUTE_OTHERS,
-                            guidanceEntry,
-                            ATTRIBUTE_FR_OTHER_MAX_THRESHOLD,
-                            ATTRIBUTE_FR_OTHER_MIN_THRESHOLD)) {
-                        SessionCentroidEntry sessionLearningEntry = new SessionCentroidEntry();
-                        sessionLearningEntry.setGuidanceEntry(guidanceEntry);
+                    if (validateRefinementEntry(SessionEntryType.ATTRIBUTE_OTHERS, feedbackAttribute)) {
+                        SessionCentroidModelCluster.SessionCentroidEntry sessionLearningEntry =
+                                new SessionCentroidModelCluster.SessionCentroidEntry();
+                        sessionLearningEntry.setFeedbackAttribute(feedbackAttribute);
                         sessionLearningEntry.setSessionEntryType(SessionEntryType.ATTRIBUTE_OTHERS);
-                        sessionLearningEntry.setCount(PRODUCT_FACTOR);
                         sessionCentroidEntryList.add(sessionLearningEntry);
                     }
                 }
-            }*/
+            }
             return sessionCentroidEntryList;
         }
 
@@ -512,10 +601,21 @@ public class SessionLearningGeneratorActor extends AbstractActor {
          */
         private ExtendedProduct retrieveProductViewed(long productId)
                 throws IOException, IllegalAccessException, InstantiationException {
+            AzzimovSearchRequest azzimovSearchRequest = sessionLearningGeneratorActor.createInternalSearchRequest();
+            AzzimovSearchRequestValidator azzimovSearchRequestValidator =
+                    new AzzimovSearchRequestValidator(this.configurationHandler);
+            AzzimovSearchParameters azzimovSearchParameters = azzimovSearchRequestValidator
+                    .validateRequest(azzimovSearchRequest);
+
+            Map<String, String> targetDocumentTypes = azzimovSearchParameters.getTargetRepositories();
+            String targetRepository = targetDocumentTypes.get(Product.PRODUCT_EXTERNAL_NAME);
+            // pre process the query as we want here
+            List<String> targetDocs = new ArrayList<>();
+            targetDocs.add(Product.PRODUCT_EXTERNAL_NAME);
             AzzimovGetRequest<ExtendedProduct> azzimovGetRequest = new AzzimovGetRequest<>(ExtendedProduct.class);
-            AzzimovGetQuery azzimovGetQuery = new AzzimovGetQuery("", new ArrayList<>());
+            AzzimovGetQuery azzimovGetQuery = new AzzimovGetQuery(targetRepository, targetDocs);
             List<String> productIds = new ArrayList<>();
-            productIds.add(String.valueOf(productId));
+            productIds.add(PRODUCT_PREFIX + String.valueOf(productId));
             azzimovGetQuery.setDocumentIds(productIds);
             azzimovGetRequest.setAzzimovGetQuery(azzimovGetQuery);
             azzimovGetRequest.setClazz(ExtendedProduct.class);
@@ -524,24 +624,16 @@ public class SessionLearningGeneratorActor extends AbstractActor {
             return extendedProductList.get(0);
         }
 
+        private boolean validateRefinementEntry(SessionEntryType sessionEntryType,
+                                                FeedbackAttribute feedbackAttribute) {
+            if (sessionLearningGeneratorActor.categoryAttributeStatistics.get(sessionEntryType)
+                    .containsKey(feedbackAttribute)) {
+                return true;
+            }
+            return false;
+        }
     }
 
-    /* private static boolean validateRefinementEntry(SessionEntryType sessionEntryType,
-                                                    GuidanceEntry guidanceEntry,
-                                                    double maxThreshold,
-                                                    double minThreshold) {
-         if (categoryAttributeStatistics.get(sessionEntryType).containsKey(guidanceEntry)) {
-             float frequency = categoryAttributeStatistics.get(sessionEntryType).get(guidanceEntry);
-             if (frequency <= maxThreshold && frequency >= minThreshold) {
-                 log.debug("--------->>>>Entry={} frequency={}", guidanceEntry.getEntry(), frequency);
-                 return true;
-             } else {
-                 log.debug("NO --------->>>>Entry={} frequency={}", guidanceEntry.getEntry(), frequency);
-             }
-         }
-         return false;
-     }
- */
     private static class SessionLearningQueryFeedbackVisitor implements FeedbackVisitor<List<String>> {
         private SessionCentroidModelCluster sessionCentroidModelCluster;
         private static final int MAX_N_GRAM_LIMIT = 5;

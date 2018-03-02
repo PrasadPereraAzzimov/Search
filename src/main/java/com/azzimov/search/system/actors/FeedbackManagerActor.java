@@ -51,20 +51,21 @@ public class FeedbackManagerActor extends AbstractActor {
                             ConfigurationHandler.getConfigurationHandler());
                     if (azzimovFeedbackPersistRequest.getFeedback() != null) {
                         feedbackPersistManager.persistFeedback(azzimovFeedbackPersistRequest.getFeedback(), null);
-                        sendSessionSearchFeedback(azzimovFeedbackPersistRequest.getFeedback());
+                        sendSessionSearchFeedback(azzimovFeedbackPersistRequest);
                     } else {
                         Feedback feedback = feedbackPersistManager
                                 .persistFeedback(azzimovFeedbackPersistRequest.getAzzimovSearchRequest(),
                                 azzimovFeedbackPersistRequest.getAzzimovSearchResponse());
-                        sendSessionSearchFeedback(feedback);
+                        azzimovFeedbackPersistRequest.setFeedback(feedback);
+                        sendSessionSearchFeedback(azzimovFeedbackPersistRequest);
                     }
 
                 }).build();
     }
 
-    private void sendSessionSearchFeedback(Feedback feedback) {
+    private void sendSessionSearchFeedback(AzzimovFeedbackPersistRequest feedbackPersistRequest) {
         ActorSelection selection = appConfiguration.actorSystem().actorSelection("/user/" + AppConfiguration.SESSION_LEARN_ACTOR);
         logger.info("Sending feedback request to  {}", selection);
-        selection.tell(feedback, ActorRef.noSender());
+        selection.tell(feedbackPersistRequest, ActorRef.noSender());
     }
 }

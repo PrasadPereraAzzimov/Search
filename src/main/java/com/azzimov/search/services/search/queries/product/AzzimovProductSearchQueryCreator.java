@@ -6,6 +6,7 @@ import com.azzimov.search.common.dto.externals.Attribute;
 import com.azzimov.search.common.dto.externals.Category;
 import com.azzimov.search.common.dto.externals.Product;
 import com.azzimov.search.common.query.AzzimovBooleanQuery;
+import com.azzimov.search.common.query.AzzimovMatchAllQuery;
 import com.azzimov.search.common.query.AzzimovMatchPhraseQuery;
 import com.azzimov.search.common.query.AzzimovNestedQuery;
 import com.azzimov.search.common.query.AzzimovQuery;
@@ -169,13 +170,20 @@ public class AzzimovProductSearchQueryCreator extends AzzimovQueryCreator<Azzimo
         azzimovBooleanQuery.addShouldQuery(azzimovMatchPhraseQueryLongDesc);
 
         List<String> allQueryTargetFields = new ArrayList<>();
-        AzzimovQueryStringQuery azzimovQueryStringQuery = new AzzimovQueryStringQuery(targetRepository,
-                allQueryTargetFields,
-                targetDocs,
-                normalizedQuery);
-        azzimovQueryStringQuery.setQueryMinimumShouldMatch(
-                minimumFieldMatch.get(SearchConfiguration.SEARCH_ALL));
-        azzimovBooleanQuery.addMustQuery(azzimovQueryStringQuery);
+        // For empty string, we create a match all query
+        if (normalizedQuery.isEmpty()) {
+            AzzimovMatchAllQuery azzimovMatchAllQuery = new AzzimovMatchAllQuery(targetRepository,
+                    targetDocs);
+            azzimovBooleanQuery.addMustQuery(azzimovMatchAllQuery);
+        } else {
+            AzzimovQueryStringQuery azzimovQueryStringQuery = new AzzimovQueryStringQuery(targetRepository,
+                    allQueryTargetFields,
+                    targetDocs,
+                    normalizedQuery);
+            azzimovQueryStringQuery.setQueryMinimumShouldMatch(
+                    minimumFieldMatch.get(SearchConfiguration.SEARCH_ALL));
+            azzimovBooleanQuery.addMustQuery(azzimovQueryStringQuery);
+        }
         azzimovBooleanQuery.setResultOffset(azzimovParameters.getAzzimovSearchRequest()
                 .getAzzimovSearchRequestParameters().getResultOffset());
         azzimovBooleanQuery.setResultSize(azzimovParameters.getAzzimovSearchRequest()
