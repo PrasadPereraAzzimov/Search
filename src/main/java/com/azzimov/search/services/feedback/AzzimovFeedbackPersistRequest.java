@@ -3,6 +3,7 @@ package com.azzimov.search.services.feedback;
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
 import com.azzimov.search.common.dto.internals.feedback.Feedback;
+import java.util.List;
 
 /**
  * Created by prasad on 1/19/18.
@@ -12,7 +13,7 @@ import com.azzimov.search.common.dto.internals.feedback.Feedback;
 public class AzzimovFeedbackPersistRequest {
     private AzzimovSearchRequest azzimovSearchRequest;
     private AzzimovSearchResponse azzimovSearchResponse;
-    private Feedback feedback;
+    private List<? extends Feedback> feedbackList;
 
 
     public AzzimovSearchRequest getAzzimovSearchRequest() {
@@ -23,12 +24,12 @@ public class AzzimovFeedbackPersistRequest {
         this.azzimovSearchRequest = azzimovSearchRequest;
     }
 
-    public Feedback getFeedback() {
-        return feedback;
+    public List<? extends Feedback> getFeedbackList() {
+        return feedbackList;
     }
 
-    public void setFeedback(Feedback feedback) {
-        this.feedback = feedback;
+    public void setFeedbackList(List<? extends Feedback> feedbackList) {
+        this.feedbackList = feedbackList;
     }
 
     public AzzimovSearchResponse getAzzimovSearchResponse() {

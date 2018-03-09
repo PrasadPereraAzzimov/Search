@@ -115,35 +115,71 @@ public class SessionLearningGeneratorActor extends AbstractActor {
     }
 
     private void updateSessionModel(AzzimovFeedbackPersistRequest azzimovFeedbackPersistRequest) throws Exception {
-        Feedback feedback = azzimovFeedbackPersistRequest.getFeedback();
-        String cacheKey = configurationHandler
-                .getStringConfig(SearchConfiguration.SESSION_LEVEL_CENTROID_MODEL, DEFAULT_MODEL_KEY) +
-                feedback.getSessionId();
-        // Retrieve previous model
-        SessionCentroidModelCluster sessionCentroidModelClusterPrevious = retrieveSessionModel(cacheKey);
-        SessionCentroidModelCluster sessionCentroidModelCluster = new SessionCentroidModelCluster();
-        SessionLearningRefinementFeedbackVisitor sessionLearningFeedbackVisitor =
-                new SessionLearningRefinementFeedbackVisitor(this.searchExecutorService, this.configurationHandler,
-                        this, azzimovFeedbackPersistRequest);
-        SessionLearningQueryFeedbackVisitor sessionLearningQueryFeedbackVisitor =
-                new SessionLearningQueryFeedbackVisitor(sessionCentroidModelClusterPrevious);
-        // retrieve all the refinements from the feedback
-        List<SessionCentroidModelCluster.SessionCentroidEntry> sessionCentroidEntryList =
-                feedback.accept(sessionLearningFeedbackVisitor);
-        String refinementSet = "[";
-        for (SessionCentroidModelCluster.SessionCentroidEntry sessionCentroidEntry : sessionCentroidEntryList) {
-            refinementSet += sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeLabel().getLabel() + ",";
-        }
-        refinementSet += "]";
-        // retrieve the query related to the feedback
-        List<String> queryKeys = feedback.accept(sessionLearningQueryFeedbackVisitor);
-        log.info("Refinement set = {} for the query = {}", refinementSet, queryKeys);
-        Map<String, SessionCentroidModelCluster.SessionCentroidEntry> sessionLearningEntryMap = new HashMap<>();
-        Map<String, List<SessionCentroidModelCluster.SessionCentroid>> sessionLearningModelClusterMap = new HashMap<>();
+        for (Feedback feedback : azzimovFeedbackPersistRequest.getFeedbackList()) {
+            String cacheKey = configurationHandler
+                    .getStringConfig(SearchConfiguration.SESSION_LEVEL_CENTROID_MODEL, DEFAULT_MODEL_KEY) +
+                    feedback.getSessionId();
+            // Retrieve previous model
+            SessionCentroidModelCluster sessionCentroidModelClusterPrevious = retrieveSessionModel(cacheKey);
+            SessionCentroidModelCluster sessionCentroidModelCluster = new SessionCentroidModelCluster();
+            SessionLearningRefinementFeedbackVisitor sessionLearningFeedbackVisitor =
+                    new SessionLearningRefinementFeedbackVisitor(this.searchExecutorService, this.configurationHandler,
+                            this, azzimovFeedbackPersistRequest);
+            SessionLearningQueryFeedbackVisitor sessionLearningQueryFeedbackVisitor =
+                    new SessionLearningQueryFeedbackVisitor(sessionCentroidModelClusterPrevious);
+            // retrieve all the refinements from the feedback
+            List<SessionCentroidModelCluster.SessionCentroidEntry> sessionCentroidEntryList =
+                    feedback.accept(sessionLearningFeedbackVisitor);
+            String refinementSet = "[";
+            for (SessionCentroidModelCluster.SessionCentroidEntry sessionCentroidEntry : sessionCentroidEntryList) {
+                refinementSet += sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeLabel().getLabel() + ",";
+            }
+            refinementSet += "]";
+            // retrieve the query related to the feedback
+            List<String> queryKeys = feedback.accept(sessionLearningQueryFeedbackVisitor);
+            log.info("Refinement set = {} for the query = {}", refinementSet, queryKeys);
+            Map<String, SessionCentroidModelCluster.SessionCentroidEntry> sessionLearningEntryMap = new HashMap<>();
+            Map<String, List<SessionCentroidModelCluster.SessionCentroid>> sessionLearningModelClusterMap = new HashMap<>();
 
-        for (String queryKey : queryKeys) {
+            for (String queryKey : queryKeys) {
+                SessionCentroidModelCluster.SessionCentroid sessionCentroid =
+                        new SessionCentroidModelCluster.SessionCentroid();
+                for (SessionCentroidModelCluster.SessionCentroidEntry sessionCentroidEntry : sessionCentroidEntryList) {
+                    String sessionLearningEntryKey = sessionCentroidEntry
+                            .getFeedbackAttribute().getFeedbackAttributeLabel().getLabel();
+                    if (sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue() != null &&
+                            !sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue().getStrValue().isEmpty()) {
+                        sessionLearningEntryKey += ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
+                                sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue().getStrValue();
+                    } else {
+                        sessionLearningEntryKey += ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
+                                sessionCentroidEntry.getFeedbackAttribute()
+                                        .getFeedbackAttributeNumericValue().getNumericValue()
+                                + ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
+                                sessionCentroidEntry.getFeedbackAttribute().getUnit();
+                    }
+
+                    if (sessionCentroidEntry.getSessionEntryType() == SessionEntryType.CATEGORY_LEVEL1 ||
+                            sessionCentroidEntry.getSessionEntryType() == SessionEntryType.CATEGORY_OTHERS) {
+                        sessionCentroid.getKeySessionLearningEntryMap()
+                                .put(sessionLearningEntryKey, sessionCentroidEntry);
+                    } else {
+                        sessionLearningEntryMap.put(sessionLearningEntryKey, sessionCentroidEntry);
+                    }
+                }
+                sessionCentroid.setClusterKey(feedback.getRequestId());
+                sessionCentroid.setSessionLearningEntryMap(sessionLearningEntryMap);
+                List<SessionCentroidModelCluster.SessionCentroid> sessionCentroidList = new ArrayList<>();
+                sessionCentroidList.add(sessionCentroid);
+                sessionLearningModelClusterMap.put(queryKey, sessionCentroidList);
+            }
+            sessionCentroidModelCluster.setSessionLearningModelClusterMap(sessionLearningModelClusterMap);
+
+            // create a all type cluster just with attributes
             SessionCentroidModelCluster.SessionCentroid sessionCentroid =
                     new SessionCentroidModelCluster.SessionCentroid();
+            sessionCentroid.setClusterKey(feedback.getRequestId());
+            sessionLearningEntryMap = new HashMap<>();
             for (SessionCentroidModelCluster.SessionCentroidEntry sessionCentroidEntry : sessionCentroidEntryList) {
                 String sessionLearningEntryKey = sessionCentroidEntry
                         .getFeedbackAttribute().getFeedbackAttributeLabel().getLabel();
@@ -158,64 +194,29 @@ public class SessionLearningGeneratorActor extends AbstractActor {
                             + ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
                             sessionCentroidEntry.getFeedbackAttribute().getUnit();
                 }
-
-                if (sessionCentroidEntry.getSessionEntryType() == SessionEntryType.CATEGORY_LEVEL1 ||
-                        sessionCentroidEntry.getSessionEntryType() == SessionEntryType.CATEGORY_OTHERS) {
-                    sessionCentroid.getKeySessionLearningEntryMap()
-                            .put(sessionLearningEntryKey, sessionCentroidEntry);
-                } else {
+                if (sessionCentroidEntry.getSessionEntryType() != SessionEntryType.CATEGORY_LEVEL1 &&
+                        sessionCentroidEntry.getSessionEntryType() != SessionEntryType.CATEGORY_OTHERS) {
                     sessionLearningEntryMap.put(sessionLearningEntryKey, sessionCentroidEntry);
                 }
             }
-            sessionCentroid.setClusterKey(feedback.getRequestId());
             sessionCentroid.setSessionLearningEntryMap(sessionLearningEntryMap);
-            List<SessionCentroidModelCluster.SessionCentroid> sessionCentroidList = new ArrayList<>();
-            sessionCentroidList.add(sessionCentroid);
-            sessionLearningModelClusterMap.put(queryKey, sessionCentroidList);
-        }
-        sessionCentroidModelCluster.setSessionLearningModelClusterMap(sessionLearningModelClusterMap);
+            List<SessionCentroidModelCluster.SessionCentroid> sessionCentroidListAll = new ArrayList<>();
+            sessionCentroidListAll.add(sessionCentroid);
+            sessionCentroidModelCluster.getSessionLearningModelClusterMap().put(SESSION_LEARNING_DEFAULT_CLUSTER_KEY,
+                    sessionCentroidListAll);
 
-        // create a all type cluster just with attributes
-        SessionCentroidModelCluster.SessionCentroid sessionCentroid =
-                new SessionCentroidModelCluster.SessionCentroid();
-        sessionCentroid.setClusterKey(feedback.getRequestId());
-        sessionLearningEntryMap = new HashMap<>();
-        for (SessionCentroidModelCluster.SessionCentroidEntry sessionCentroidEntry : sessionCentroidEntryList) {
-            String sessionLearningEntryKey = sessionCentroidEntry
-                    .getFeedbackAttribute().getFeedbackAttributeLabel().getLabel();
-            if (sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue() != null &&
-                    !sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue().getStrValue().isEmpty()) {
-                sessionLearningEntryKey += ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
-                        sessionCentroidEntry.getFeedbackAttribute().getFeedbackAttributeStringValue().getStrValue();
-            } else {
-                sessionLearningEntryKey += ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
-                        sessionCentroidEntry.getFeedbackAttribute()
-                                .getFeedbackAttributeNumericValue().getNumericValue()
-                        + ProductGuidance.PRODUCT_GUIDANCE_SEPARATOR +
-                        sessionCentroidEntry.getFeedbackAttribute().getUnit();
-            }
-            if (sessionCentroidEntry.getSessionEntryType() != SessionEntryType.CATEGORY_LEVEL1 &&
-                    sessionCentroidEntry.getSessionEntryType() != SessionEntryType.CATEGORY_OTHERS) {
-                sessionLearningEntryMap.put(sessionLearningEntryKey, sessionCentroidEntry);
-            }
+            SessionCentroidModelCluster sessionCentroidModelClusterNext = mergeSessionLearningModels(sessionCentroidModelCluster,
+                    sessionCentroidModelClusterPrevious);
+            sessionCentroidModelClusterNext.setCreationTime(DateTime.now(DateTimeZone.UTC));
+            String bucket = azzimovCacheManager.getCouchbaseConfiguration().getBuckets().get(0);
+            AzzimovCacheRequest<SessionCentroidModelCluster> azzimovCacheRequest =
+                    new AzzimovCacheRequest<>(bucket, cacheKey);
+            azzimovCacheRequest.setExpiration(1000);
+            azzimovCacheRequest.setObjectType(sessionCentroidModelClusterNext);
+            CacheService<SessionCentroidModelCluster> learningModelCacheService =
+                    azzimovCacheManager.getCacheProvider(SessionCentroidModelCluster.class);
+            learningModelCacheService.add(azzimovCacheRequest);
         }
-        sessionCentroid.setSessionLearningEntryMap(sessionLearningEntryMap);
-        List<SessionCentroidModelCluster.SessionCentroid> sessionCentroidListAll = new ArrayList<>();
-        sessionCentroidListAll.add(sessionCentroid);
-        sessionCentroidModelCluster.getSessionLearningModelClusterMap().put(SESSION_LEARNING_DEFAULT_CLUSTER_KEY,
-                sessionCentroidListAll);
-
-        SessionCentroidModelCluster sessionCentroidModelClusterNext = mergeSessionLearningModels(sessionCentroidModelCluster,
-                sessionCentroidModelClusterPrevious);
-        sessionCentroidModelClusterNext.setCreationTime(DateTime.now(DateTimeZone.UTC));
-        String bucket = azzimovCacheManager.getCouchbaseConfiguration().getBuckets().get(0);
-        AzzimovCacheRequest<SessionCentroidModelCluster> azzimovCacheRequest =
-                new AzzimovCacheRequest<>(bucket, cacheKey);
-        azzimovCacheRequest.setExpiration(1000);
-        azzimovCacheRequest.setObjectType(sessionCentroidModelClusterNext);
-        CacheService<SessionCentroidModelCluster> learningModelCacheService =
-                azzimovCacheManager.getCacheProvider(SessionCentroidModelCluster.class);
-        learningModelCacheService.add(azzimovCacheRequest);
     }
 
     /**

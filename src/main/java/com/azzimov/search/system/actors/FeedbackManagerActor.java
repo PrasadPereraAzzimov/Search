@@ -14,6 +14,9 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.azzimov.search.system.spring.AppConfiguration.FEEDBACK_ACTOR;
 
 /**
@@ -49,14 +52,16 @@ public class FeedbackManagerActor extends AbstractActor {
                             sender());
                     FeedbackPersistManager feedbackPersistManager = new FeedbackPersistManager(searchExecutorService,
                             ConfigurationHandler.getConfigurationHandler());
-                    if (azzimovFeedbackPersistRequest.getFeedback() != null) {
-                        feedbackPersistManager.persistFeedback(azzimovFeedbackPersistRequest.getFeedback(), null);
+                    if (azzimovFeedbackPersistRequest.getFeedbackList() != null) {
+                        feedbackPersistManager.persistFeedback(azzimovFeedbackPersistRequest.getFeedbackList(), null);
                         sendSessionSearchFeedback(azzimovFeedbackPersistRequest);
                     } else {
                         Feedback feedback = feedbackPersistManager
                                 .persistFeedback(azzimovFeedbackPersistRequest.getAzzimovSearchRequest(),
                                 azzimovFeedbackPersistRequest.getAzzimovSearchResponse());
-                        azzimovFeedbackPersistRequest.setFeedback(feedback);
+                        List<Feedback> feedbackList = new ArrayList<>();
+                        feedbackList.add(feedback);
+                        azzimovFeedbackPersistRequest.setFeedbackList(feedbackList);
                         sendSessionSearchFeedback(azzimovFeedbackPersistRequest);
                     }
 

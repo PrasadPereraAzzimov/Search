@@ -64,10 +64,14 @@ public class FeedbackPersistManager {
         this.configurationHandler = configurationHandler;
     }
 
-    public boolean persistFeedback(Feedback feedback, AzzimovSearchRequest azzimovSearchRequest) throws Exception {
+    public boolean persistFeedback(List<? extends Feedback> feedbackList, AzzimovSearchRequest azzimovSearchRequest) throws Exception {
         FeedbackPersistVisitor feedbackPersistVisitor = new FeedbackPersistVisitor(searchExecutorService,
                 configurationHandler, azzimovSearchRequest);
-        return feedback.accept(feedbackPersistVisitor);
+        boolean succeed = true;
+        for (Feedback feedback : feedbackList) {
+            succeed = succeed && feedback.accept(feedbackPersistVisitor);
+        }
+        return succeed;
     }
 
     public Feedback persistFeedback(AzzimovSearchRequest azzimovSearchRequest,
@@ -150,7 +154,9 @@ public class FeedbackPersistManager {
                     .setQuerySearchResult(querySearchResult);
             feedback = feedbackBuilder.build();
         }
-        persistFeedback(feedback, azzimovSearchRequest);
+        List<Feedback> feedbackList = new ArrayList<>();
+        feedbackList.add(feedback);
+        persistFeedback(feedbackList, azzimovSearchRequest);
         return feedback;
     }
 

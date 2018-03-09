@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 /**
  * Created by prasad on 1/4/18.
@@ -29,11 +30,11 @@ public class FeedbackController {
             consumes = "application/json",
             produces = "application/json")
     @ResponseBody
-    public ResponseEntity<?> persistProductFeedback(@RequestBody ProductFeedback productFeedback) throws Exception {
+    public ResponseEntity<?> persistProductFeedback(@RequestBody List<ProductFeedback> productFeedbackList) throws Exception {
         ActorSelection selection = appConfiguration.actorSystem().actorSelection("/user/" + AppConfiguration.FEEDBACK_ACTOR);
         // Forward the recieved feedback to the feedback router actor
         AzzimovFeedbackPersistRequest azzimovFeedbackPersistRequest = new AzzimovFeedbackPersistRequest();
-        azzimovFeedbackPersistRequest.setFeedback(productFeedback);
+        azzimovFeedbackPersistRequest.setFeedbackList(productFeedbackList);
         selection.tell(azzimovFeedbackPersistRequest, ActorRef.noSender());
         return new ResponseEntity<>(HttpStatus.ACCEPTED);
     }
