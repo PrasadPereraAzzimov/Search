@@ -40,7 +40,9 @@ public class AzzimovSearchResponseBuilder {
     public com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse build() {
         com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse azzimovSearchResponseOut =
                 new com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse();
-        azzimovSearchResponseOut.setAzzimovResponseStatus(new AzzimovResponseStatus(10, "success"));
+        AzzimovResponseStatus azzimovResponseStatus = new
+                AzzimovResponseStatus(AzzimovResponseStatus.ResponseInformation.STATUS_OK);
+        azzimovSearchResponseOut.setAzzimovResponseStatus(azzimovResponseStatus);
         AzzimovSearchInfo azzimovSearchInfo = new AzzimovSearchInfo();
         azzimovSearchInfo.setCount(azzimovSearchResponse.getTotalHits());
         azzimovSearchInfo.setSearchType(SearchType.EXACT);
