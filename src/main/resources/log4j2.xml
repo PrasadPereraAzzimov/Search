@@ -14,7 +14,7 @@
         </Console>
 
         <RollingFile name="FileAppender" fileName="${sys:logging}/${FILE_NAME}.log"
-                     filePattern="${sys:logging}/${FILE_NAME}-%d{yyyy-MM-dd}-%i.log">
+                     filePattern="${sys:logging}/${FILE_NAME}.log">
             <PatternLayout>
                 <Pattern>${LOG_PATTERN}</Pattern>
             </PatternLayout>
@@ -30,6 +30,7 @@
         </Logger>
 
         <Root level="info">
+            <AppenderRef ref="FileAppender" />
             <AppenderRef ref="ConsoleAppender" />
         </Root>
     </Loggers>
