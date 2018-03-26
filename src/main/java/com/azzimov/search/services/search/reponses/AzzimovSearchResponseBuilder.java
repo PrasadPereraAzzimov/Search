@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.azzimov.search.common.dto.communications.responses.AzzimovResponseStatus.ResponseInformation.STATUS_OK;
 import static com.azzimov.search.services.search.utils.SearchFieldConstants.VALUE_TEXT;
 
 /**
@@ -40,7 +41,8 @@ public class AzzimovSearchResponseBuilder {
     public com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse build() {
         com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse azzimovSearchResponseOut =
                 new com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse();
-        azzimovSearchResponseOut.setAzzimovResponseStatus(new AzzimovResponseStatus(10, "success"));
+        azzimovSearchResponseOut.setAzzimovResponseStatus(
+                new AzzimovResponseStatus(STATUS_OK));
         AzzimovSearchInfo azzimovSearchInfo = new AzzimovSearchInfo();
         azzimovSearchInfo.setCount(azzimovSearchResponse.getTotalHits());
         azzimovSearchInfo.setSearchType(SearchType.EXACT);
