@@ -553,25 +553,38 @@ public class SessionLearningGeneratorActor extends AbstractActor {
             List<Attribute> attributeList = product.getAttributes();
             for (Attribute attribute : attributeList) {
                 if (attribute.getLabel() != null && !attribute.getLabel().isEmpty()) {
-                    FeedbackAttributeLabel feedbackAttributeLabel = new FeedbackAttributeLabel(attribute.getLabel());
-                    FeedbackAttribute feedbackAttribute = new FeedbackAttribute(feedbackAttributeLabel, attribute.getId());
-                    if (attribute.getStrValue() != null && !attribute.getStrValue().isEmpty()) {
-                        FeedbackAttributeStringValue feedbackAttributeStringValue =
-                                new FeedbackAttributeStringValue(attribute.getStrValue());
-                        feedbackAttribute.setFeedbackAttributeStringValue(feedbackAttributeStringValue);
+                    if (attribute.getStrValues() != null && !attribute.getStrValues().isEmpty()) {
+                        for (String attributeValue : attribute.getStrValues()) {
+                            FeedbackAttributeLabel feedbackAttributeLabel = new FeedbackAttributeLabel(attribute.getLabel());
+                            FeedbackAttribute feedbackAttribute = new FeedbackAttribute(feedbackAttributeLabel, attribute.getId());
+                            FeedbackAttributeStringValue feedbackAttributeStringValue =
+                                    new FeedbackAttributeStringValue(attributeValue);
+                            feedbackAttribute.setFeedbackAttributeStringValue(feedbackAttributeStringValue);
+                            if (validateRefinementEntry(SessionEntryType.ATTRIBUTE_OTHERS, feedbackAttribute)) {
+                                SessionCentroidModelCluster.SessionCentroidEntry sessionLearningEntry =
+                                        new SessionCentroidModelCluster.SessionCentroidEntry();
+                                sessionLearningEntry.setFeedbackAttribute(feedbackAttribute);
+                                sessionLearningEntry.setSessionEntryType(SessionEntryType.ATTRIBUTE_OTHERS);
+                                sessionCentroidEntryList.add(sessionLearningEntry);
+                            }
+                        }
                     } else {
-                        FeedbackAttributeNumericValue feedbackAttributeNumericValue =
-                                new FeedbackAttributeNumericValue(attribute.getNumValue());
-                        feedbackAttribute.setUnit(attribute.getUnit());
-                        feedbackAttribute.setFeedbackAttributeNumericValue(feedbackAttributeNumericValue);
+                        for (Double attributeValue : attribute.getNumValues()) {
+                            FeedbackAttributeLabel feedbackAttributeLabel = new FeedbackAttributeLabel(attribute.getLabel());
+                            FeedbackAttribute feedbackAttribute = new FeedbackAttribute(feedbackAttributeLabel, attribute.getId());
 
-                    }
-                    if (validateRefinementEntry(SessionEntryType.ATTRIBUTE_OTHERS, feedbackAttribute)) {
-                        SessionCentroidModelCluster.SessionCentroidEntry sessionLearningEntry =
-                                new SessionCentroidModelCluster.SessionCentroidEntry();
-                        sessionLearningEntry.setFeedbackAttribute(feedbackAttribute);
-                        sessionLearningEntry.setSessionEntryType(SessionEntryType.ATTRIBUTE_OTHERS);
-                        sessionCentroidEntryList.add(sessionLearningEntry);
+                            FeedbackAttributeNumericValue feedbackAttributeNumericValue =
+                                    new FeedbackAttributeNumericValue(attributeValue);
+                            feedbackAttribute.setUnit(attribute.getUnit());
+                            feedbackAttribute.setFeedbackAttributeNumericValue(feedbackAttributeNumericValue);
+                            if (validateRefinementEntry(SessionEntryType.ATTRIBUTE_OTHERS, feedbackAttribute)) {
+                                SessionCentroidModelCluster.SessionCentroidEntry sessionLearningEntry =
+                                        new SessionCentroidModelCluster.SessionCentroidEntry();
+                                sessionLearningEntry.setFeedbackAttribute(feedbackAttribute);
+                                sessionLearningEntry.setSessionEntryType(SessionEntryType.ATTRIBUTE_OTHERS);
+                                sessionCentroidEntryList.add(sessionLearningEntry);
+                            }
+                        }
                     }
                 }
             }
