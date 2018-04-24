@@ -14,6 +14,7 @@ public class SearchFieldConstants {
     public static final String VALUE_NUM = "value_num";
     public static final String VALUE_DATE = "value_date";
     public static final String VALUE_TEXT = "value_text";
+    public static final String SUGGEST_FIELD = "suggest";
 
     public static String retrieveFieldPath(String... path) {
         String fieldPath = "";

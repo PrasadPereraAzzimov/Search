@@ -4,6 +4,7 @@ import com.azzimov.search.common.dto.SearchType;
 import com.azzimov.search.common.dto.communications.responses.AzzimovResponseStatus;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchInfo;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponseParameter;
+import com.azzimov.search.common.dto.communications.responses.search.AzzimovSuggestionResponse;
 import com.azzimov.search.common.dto.externals.Guidance;
 import com.azzimov.search.common.dto.externals.GuidanceCategory;
 import com.azzimov.search.common.dto.externals.GuidanceFilter;
@@ -14,6 +15,7 @@ import com.azzimov.search.common.requests.AzzimovSearchRequest;
 import com.azzimov.search.common.responses.AzzimovAggregationResponse;
 import com.azzimov.search.common.responses.AzzimovSearchHitResponse;
 import com.azzimov.search.common.responses.AzzimovSearchResponse;
+import com.azzimov.search.common.responses.AzzimovSuggestResponse;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -75,6 +77,18 @@ public class AzzimovSearchResponseBuilder {
                     guidanceFilterList.addAll(createAttributeResults(azzimovAggregationResponse));
                 }
             }
+        }
+
+        if (azzimovSearchResponse.getAzzimovSuggestResponseList() != null &&
+                !azzimovSearchResponse.getAzzimovSuggestResponseList().isEmpty()) {
+            AzzimovSuggestionResponse azzimovSuggestionResponse = new AzzimovSuggestionResponse();
+            List<String> suggestionList = new ArrayList<>();
+            for (AzzimovSuggestResponse azzimovSuggestResponse : azzimovSearchResponse.getAzzimovSuggestResponseList()) {
+                if (azzimovSuggestResponse.isMatchedIndex())
+                    suggestionList.add(azzimovSuggestResponse.getText());
+            }
+            azzimovSuggestionResponse.setSuggestions(suggestionList);
+            azzimovSearchResponseOut.setAzzimovSuggestionResponse(azzimovSuggestionResponse);
         }
         guidance.setGuidanceCategories(guidanceCategoryList);
         guidance.setGuidanceFilters(guidanceFilterList);

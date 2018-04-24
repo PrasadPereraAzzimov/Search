@@ -31,7 +31,6 @@ import org.joda.time.DateTimeZone;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.security.InvalidParameterException;
@@ -94,6 +93,7 @@ public class SearchManagerActor extends AbstractActor {
                         AzzimovSearchParameters azzimovSearchParameters = azzimovSearchRequestValidator
                                 .validateRequest(azzimovSearchRequest);
                         CompletionStage<Object> aggregateResponse = retrieveGuidanceResponse(azzimovSearchParameters);
+                        CompletionStage<Object> suggestResponse = retrieveSuggestionResponse(azzimovSearchParameters);
                         List<AzzimovSearchResponse> azzimovSearchResponseList = new ArrayList<>();
                         for (Map.Entry<String, String> targetTypes :
                                 azzimovSearchParameters.getTargetRepositories().entrySet()) {
@@ -115,13 +115,17 @@ public class SearchManagerActor extends AbstractActor {
                                             .search(azzimovSearchParametersList);
                             // Retrieve aggregation response and combine with final searcg result response
                             List<AzzimovSearchResponse> azzimovAggregateResponseList = (List<AzzimovSearchResponse>)
-                                    aggregateResponse.toCompletableFuture().get(3000, TimeUnit.SECONDS);;
+                                    aggregateResponse.toCompletableFuture().get(3000, TimeUnit.SECONDS);
+                            List<AzzimovSearchResponse> azzimovSuggestResponseList = (List<AzzimovSearchResponse>)
+                                    suggestResponse.toCompletableFuture().get(3000, TimeUnit.SECONDS);
                             int index = 0;
                             for (AzzimovSearchResponse azzimovSearchResponse : azzimovSearchResponseList) {
                                 azzimovSearchResponse
                                         .getAzzimovSearchResponseParameter().setGuidance(
                                                 azzimovAggregateResponseList.get(index++)
                                                         .getAzzimovSearchResponseParameter().getGuidance());
+                                azzimovSearchResponse.setAzzimovSuggestionResponse(
+                                        azzimovSuggestResponseList.get(0).getAzzimovSuggestionResponse());
                             }
                             logger.info("Returning search response = {}",
                                     azzimovSearchResponseList.get(0).getAzzimovSearchInfo().getCount());
@@ -149,6 +153,15 @@ public class SearchManagerActor extends AbstractActor {
     private CompletionStage<Object> retrieveGuidanceResponse(AzzimovSearchParameters azzimovSearchParameters) {
         ActorSelection selection = appConfiguration.actorSystem().actorSelection("/user/" + AppConfiguration.AGGREGATE_ACTOR);
         logger.info("Sending aggregate request to  {}", selection);
+        final CompletionStage<Object> completionStage  = PatternsCS.ask(selection, azzimovSearchParameters,
+                new Timeout(300, TimeUnit.SECONDS));
+        return completionStage;
+    }
+
+    private CompletionStage<Object> retrieveSuggestionResponse(AzzimovSearchParameters azzimovSearchParameters) {
+        ActorSelection selection = appConfiguration.actorSystem().actorSelection("/user/" +
+                AppConfiguration.SUGGEST_AUTOCOMPLETE_ACTOR);
+        logger.info("Sending suggest request to  {}", selection);
         final CompletionStage<Object> completionStage  = PatternsCS.ask(selection, azzimovSearchParameters,
                 new Timeout(300, TimeUnit.SECONDS));
         return completionStage;

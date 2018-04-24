@@ -93,7 +93,8 @@ public class AzzimovProductSearchExecutor extends AzzimovSearchExecutor {
             // If the sort is relevance sorting, lets add that to the query
             if (!azzimovFunctionScoreQueryList.isEmpty())
                 azzimovFunctionScoreQuery = azzimovFunctionScoreQueryList.get(0);
-
+            azzimovFunctionScoreQuery.setQueryName(
+                    azzimovSearchParameters.getAzzimovSearchRequest().getAzzimovSearchRequestParameters().getQuery());
             searchRequest.setAzzimovQuery(azzimovFunctionScoreQuery);
 
             // Execute the query and retrieve results
