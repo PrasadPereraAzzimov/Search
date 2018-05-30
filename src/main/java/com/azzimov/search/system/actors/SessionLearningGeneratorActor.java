@@ -465,7 +465,6 @@ public class SessionLearningGeneratorActor extends AbstractActor {
                                     new FeedbackAttributeNumericValue(attributeNumValue);
                             feedbackAttribute.setFeedbackAttributeNumericValue(feedbackAttributeNumericValue);
                         } catch (NumberFormatException e) {
-                            log.warn("Wrong type of filter: number could not be parsed : " + filterValue);
                             FeedbackAttributeStringValue feedbackAttributeStringValue =
                                     new FeedbackAttributeStringValue(filterValue);
                             feedbackAttribute.setFeedbackAttributeStringValue(feedbackAttributeStringValue);
