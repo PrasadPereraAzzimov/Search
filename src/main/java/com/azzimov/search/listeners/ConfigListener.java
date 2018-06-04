@@ -15,7 +15,6 @@ import com.typesafe.config.ConfigValue;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.stereotype.Component;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
@@ -32,7 +31,6 @@ import java.util.Map;
  * Created by RahulGupta on 2017-12-21.
  * ConfigListener Reads the config files and load them
  */
-@Component
 @WebListener
 public class ConfigListener implements ServletContextListener {
     private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
@@ -64,8 +62,6 @@ public class ConfigListener implements ServletContextListener {
             systemConfigMap = new HashMap<>();
             taskConfigMap = new HashMap<>();
             systemAkkConfigMap = new HashMap<>();
-
-            System.out.println("========= Config Listener has been started ===========");
 
             //read global configuration
             readConfig(SEARCH_CONFIGURATION_PATH, searchConfigMap, true);
@@ -158,7 +154,7 @@ public class ConfigListener implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
-        System.out.println("========= Config Listener has been destroyed ===========");
+        // Nothing to do here for now
     }
 
     public static Map<String, String> retrieveTargetRepositoriesforDocuments(List<Object> targetRepositoryConfigs,

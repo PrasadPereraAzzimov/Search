@@ -7,8 +7,8 @@ import com.azzimov.search.common.dto.internals.feedback.FeedbackAttribute;
 import com.azzimov.search.common.dto.internals.feedback.FeedbackAttributeLabel;
 import com.azzimov.search.common.dto.internals.feedback.FeedbackAttributeNumericValue;
 import com.azzimov.search.common.dto.internals.feedback.FeedbackAttributeStringValue;
+import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SearchConfiguration;
-import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.trinity.common.learning.ModelEntity;
 import com.azzimov.trinity.common.learning.guidance.GuidanceModel;
@@ -34,7 +34,7 @@ public class LearnStatModelService {
     private LearnCentroidCluster guidanceLearnCentroidCluster;
     private LearnCentroidCluster productLearnCentroidCluster;
     private AzzimovCacheManager azzimovCacheManager;
-    private ConfigListener configListener;
+    private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
 
     public LearnStatModelService() {
         this.guidanceLearnCentroidCluster = new LearnCentroidCluster();
@@ -42,12 +42,12 @@ public class LearnStatModelService {
     }
 
 
-    public static LearnCentroidCluster retrieveGuidanceLearningModelManager(ConfigListener configListener,
+    public static LearnCentroidCluster retrieveGuidanceLearningModelManager(ConfigurationHandler configurationHandler,
                                                                              AzzimovCacheManager azzimovCacheManager,
                                                                              String centroidKey)
             throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, IOException {
-        double guidanceLearningMaxCoefficient = configListener.
-                getConfigurationHandler().getDoubleConfig(SearchConfiguration.SEARCH_GUIDANCE_CENTROID_MAX_WEIGHT);
+        double guidanceLearningMaxCoefficient = configurationHandler
+                .getDoubleConfig(SearchConfiguration.SEARCH_GUIDANCE_CENTROID_MAX_WEIGHT);
         CacheService<GuidanceModel> guidanceModelCacheService = azzimovCacheManager.getCacheProvider(GuidanceModel.class);
         // In in this version of Azzimov Search, we want to deploy only one bucket cache for all deployments..
         List<String> buckets = azzimovCacheManager.getCouchbaseConfiguration().getBuckets();
@@ -112,7 +112,7 @@ public class LearnStatModelService {
             InstantiationException,
             IllegalAccessException,
             IOException {
-        guidanceLearnCentroidCluster = retrieveGuidanceLearningModelManager(this.configListener,
+        guidanceLearnCentroidCluster = retrieveGuidanceLearningModelManager(configurationHandler,
                 this.azzimovCacheManager, LearnCentroidCluster.CENTROID_GUIDANCE_KEY + "-ALL");
     }
 
@@ -128,10 +128,5 @@ public class LearnStatModelService {
     @Autowired
     public void setAzzimovCacheManager(AzzimovCacheManager azzimovCacheManager) {
         this.azzimovCacheManager = azzimovCacheManager;
-    }
-
-    @Autowired
-    public void setConfigListener(ConfigListener configListener) {
-        this.configListener = configListener;
     }
 }

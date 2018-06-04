@@ -3,7 +3,7 @@ package com.azzimov.search.system.actors;
 import akka.actor.AbstractActor;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
 import com.azzimov.search.common.dto.externals.Product;
-import com.azzimov.search.listeners.ConfigListener;
+import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.search.services.search.executors.AzzimovAggregateExecutor;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
@@ -32,11 +32,11 @@ import static com.azzimov.search.system.spring.AppConfiguration.AGGREGATE_ACTOR;
 public class SearchAggregationManagerActor extends AbstractActor {
     private static final Logger logger = LogManager.getLogger(SearchAggregationManagerActor.class);
     private SearchExecutorService searchExecutorService;
-    private ConfigListener configListener;
     private AppConfiguration appConfiguration;
     private Map<String, AzzimovAggregateExecutor> azzimovSearchExecutorMap;
     private LearnStatModelService learnStatModelService;
     private AzzimovCacheManager azzimovCacheManager;
+    private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
 
     /**
      * Constructor for FeedbackManagerActor
@@ -44,15 +44,13 @@ public class SearchAggregationManagerActor extends AbstractActor {
      * @param searchExecutorService search executor service
      */
     public SearchAggregationManagerActor(SearchExecutorService searchExecutorService,
-                                         ConfigListener configListener,
                                          AppConfiguration appConfiguration,
                                          LearnStatModelService learnStatModelService,
                                          AzzimovCacheManager azzimovCacheManager) {
         this.searchExecutorService = searchExecutorService;
-        this.configListener = configListener;
         this.appConfiguration = appConfiguration;
         this.azzimovSearchExecutorMap =
-                createAzzimovAggregateExecutors(searchExecutorService, configListener, azzimovCacheManager);
+                createAzzimovAggregateExecutors(searchExecutorService, azzimovCacheManager);
         this.learnStatModelService = learnStatModelService;
         this.azzimovCacheManager = azzimovCacheManager;
     }
@@ -87,11 +85,10 @@ public class SearchAggregationManagerActor extends AbstractActor {
     }
 
     private Map<String, AzzimovAggregateExecutor> createAzzimovAggregateExecutors(SearchExecutorService searchExecutorService,
-                                                                                  ConfigListener configListener,
                                                                                   AzzimovCacheManager azzimovCacheManager) {
         Map<String, AzzimovAggregateExecutor> azzimovSearchExecutorMap = new HashMap<>();
         AzzimovAggregateExecutor azzimovAggregateExecutor = new AzzimovProductAggregateExecutorCreator(
-                configListener.getConfigurationHandler(),
+                configurationHandler,
                 searchExecutorService,
                 azzimovCacheManager);
         azzimovSearchExecutorMap.put(Product.PRODUCT_EXTERNAL_NAME, azzimovAggregateExecutor);

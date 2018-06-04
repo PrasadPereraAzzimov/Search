@@ -11,8 +11,8 @@ import com.azzimov.search.common.cache.service.CacheService;
 import com.azzimov.search.common.dto.communications.requests.search.AzzimovSearchRequest;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
 import com.azzimov.search.common.dto.externals.Product;
+import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SearchConfiguration;
-import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
 import com.azzimov.search.services.search.executors.AzzimovSearchExecutor;
@@ -54,26 +54,23 @@ import static com.azzimov.search.system.spring.AppConfiguration.SEARCH_ACTOR;
 public class SearchManagerActor extends AbstractActor {
     private static final Logger logger = LogManager.getLogger(SearchManagerActor.class);
     private SearchExecutorService searchExecutorService;
-    private ConfigListener configListener;
     private AppConfiguration appConfiguration;
     private Map<String, AzzimovSearchExecutor> azzimovSearchExecutorMap;
     private LearnStatModelService learnStatModelService;
     private AzzimovCacheManager azzimovCacheManager;
-
+    private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
     /**
      * Constructor for FeedbackManagerActor
      * @param searchExecutorService search executor service
      */
     public SearchManagerActor(SearchExecutorService searchExecutorService,
-                              ConfigListener configListener,
                               AppConfiguration appConfiguration,
                               LearnStatModelService learnStatModelService,
                               AzzimovCacheManager azzimovCacheManager) {
         this.searchExecutorService = searchExecutorService;
-        this.configListener = configListener;
         this.appConfiguration = appConfiguration;
         this.azzimovSearchExecutorMap =
-                createAzzimovSearchExecutors(searchExecutorService, configListener, learnStatModelService);
+                createAzzimovSearchExecutors(searchExecutorService, learnStatModelService);
         this.learnStatModelService = learnStatModelService;
         this.azzimovCacheManager = azzimovCacheManager;
     }
@@ -88,7 +85,7 @@ public class SearchManagerActor extends AbstractActor {
         return receiveBuilder()
                 .match(AzzimovSearchRequest.class, azzimovSearchRequest -> {
                     AzzimovSearchRequestValidator azzimovSearchRequestValidator =
-                            new AzzimovSearchRequestValidator(configListener.getConfigurationHandler());
+                            new AzzimovSearchRequestValidator(configurationHandler);
                     try {
                         AzzimovSearchParameters azzimovSearchParameters = azzimovSearchRequestValidator
                                 .validateRequest(azzimovSearchRequest);
@@ -168,11 +165,10 @@ public class SearchManagerActor extends AbstractActor {
     }
 
     private Map<String, AzzimovSearchExecutor> createAzzimovSearchExecutors(SearchExecutorService searchExecutorService,
-                                                                            ConfigListener configListener,
                                                                             LearnStatModelService learnStatModelService) {
         Map<String, AzzimovSearchExecutor> azzimovSearchExecutorMap = new HashMap<>();
         AzzimovSearchExecutor azzimovSearchExecutor = new AzzimovProductSearchExecutor(
-                configListener.getConfigurationHandler(),
+                configurationHandler,
                 searchExecutorService);
         azzimovSearchExecutorMap.put(Product.PRODUCT_EXTERNAL_NAME, azzimovSearchExecutor);
         return azzimovSearchExecutorMap;
@@ -182,7 +178,7 @@ public class SearchManagerActor extends AbstractActor {
         String modelKey = LearnCentroidCluster.CENTROID_GUIDANCE_KEY + "-" +
                 azzimovSearchRequest.getAzzimovUserRequestParameters().getMemberId();
         try {
-            return LearnStatModelService.retrieveGuidanceLearningModelManager(configListener, azzimovCacheManager, modelKey);
+            return LearnStatModelService.retrieveGuidanceLearningModelManager(configurationHandler, azzimovCacheManager, modelKey);
         } catch (InvocationTargetException e) {
             e.printStackTrace();
         } catch (NoSuchMethodException e) {
@@ -198,7 +194,7 @@ public class SearchManagerActor extends AbstractActor {
     }
 
     private LearnCentroidCluster retrieveSessionModel(AzzimovSearchRequest azzimovSearchRequest) {
-        String cacheKey = configListener.getConfigurationHandler()
+        String cacheKey = configurationHandler
                 .getStringConfig(SearchConfiguration.SESSION_LEVEL_CENTROID_MODEL, DEFAULT_MODEL_KEY) +
                 azzimovSearchRequest.getAzzimovUserRequestParameters().getSessionId();
         String bucket = azzimovCacheManager.getCouchbaseConfiguration().getBuckets().get(0);

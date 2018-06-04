@@ -2,7 +2,7 @@ package com.azzimov.search.system.actors;
 
 import akka.actor.AbstractActor;
 import com.azzimov.search.common.dto.communications.responses.search.AzzimovSearchResponse;
-import com.azzimov.search.listeners.ConfigListener;
+import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.azzimov.search.services.search.executors.product.AzzimovProductSuggestionExecutor;
@@ -27,23 +27,21 @@ import static com.azzimov.search.system.spring.AppConfiguration.SUGGEST_AUTOCOMP
 @Component(value = SUGGEST_AUTOCOMPLETE_ACTOR)
 public class SuggestAutocompleteManagerActor extends AbstractActor {
     private static final Logger logger = LogManager.getLogger(SearchManagerActor.class);
-    private ConfigListener configListener;
     private AppConfiguration appConfiguration;
     private AzzimovCacheManager azzimovCacheManager;
     private AzzimovProductSuggestionExecutor azzimovProductSuggestionExecutor;
+    private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
 
     /**
      * Constructor for FeedbackManagerActor
      * @param searchExecutorService search executor service
      */
     public SuggestAutocompleteManagerActor(SearchExecutorService searchExecutorService,
-                                           ConfigListener configListener,
                                            AppConfiguration appConfiguration,
                                            AzzimovCacheManager azzimovCacheManager) {
-        this.configListener = configListener;
         this.appConfiguration = appConfiguration;
         this.azzimovCacheManager = azzimovCacheManager;
-        this.azzimovProductSuggestionExecutor = new AzzimovProductSuggestionExecutor(configListener.getConfigurationHandler(),
+        this.azzimovProductSuggestionExecutor = new AzzimovProductSuggestionExecutor(configurationHandler,
                 searchExecutorService);
     }
 

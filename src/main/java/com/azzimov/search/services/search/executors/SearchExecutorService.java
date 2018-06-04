@@ -2,11 +2,10 @@ package com.azzimov.search.services.search.executors;
 
 import com.azzimov.search.common.elasticsearch.configurations.ElasticsearchConfiguration;
 import com.azzimov.search.common.elasticsearch.executors.ElasticsearchExecutorService;
+import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SystemConfiguration;
-import com.azzimov.search.listeners.ConfigListener;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -23,19 +22,20 @@ import java.util.Map;
 public class SearchExecutorService {
     private static final Logger logger = LogManager.getLogger(SearchExecutorService.class);
     private final ElasticsearchExecutorService elasticsearchExecutorService;
+    private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
 
-    public SearchExecutorService(@Autowired ConfigListener configListener) {
-        elasticsearchExecutorService = initExecutorService(configListener);
+    public SearchExecutorService() {
+        elasticsearchExecutorService = initExecutorService();
     }
 
-    private ElasticsearchExecutorService initExecutorService(ConfigListener configListener) {
-        String clusterName = configListener.getConfigurationHandler()
+    private ElasticsearchExecutorService initExecutorService() {
+        String clusterName = configurationHandler
                 .getStringConfig(SystemConfiguration.ES_CLUSTER_NAME);
-        int searchTimeout = configListener.getConfigurationHandler()
+        int searchTimeout = configurationHandler
                 .getIntConfig(SystemConfiguration.ES_SEARCH_TIMEOUT);
-        int serverPort = configListener.getConfigurationHandler()
+        int serverPort = configurationHandler
                 .getIntConfig(SystemConfiguration.ES_PORT);
-        List<String> hostList = configListener.getConfigurationHandler()
+        List<String> hostList = configurationHandler
                 .getStringConfigList(SystemConfiguration.ES_HOSTS);
 
         // create elasticsearch configurations

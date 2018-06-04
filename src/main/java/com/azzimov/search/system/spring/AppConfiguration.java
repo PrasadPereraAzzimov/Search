@@ -1,7 +1,7 @@
 package com.azzimov.search.system.spring;
 
 import akka.actor.ActorSystem;
-import com.azzimov.search.listeners.ConfigListener;
+import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.services.search.executors.SearchExecutorService;
 import com.typesafe.config.Config;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,15 +20,13 @@ import java.util.Map;
 public class AppConfiguration {
     private static final String AZZIMOV_SEARCH_ACTOR_SYSTEM = "azzimov-search-actor-system";
     private ApplicationContext applicationContext;
-    private ConfigListener configListener;
+    private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
     private SearchExecutorService searchExecutorService;
 
     @Autowired
     public AppConfiguration(ApplicationContext applicationContext,
-                            ConfigListener configListener,
                             SearchExecutorService searchExecutorService) {
         this.applicationContext = applicationContext;
-        this.configListener = configListener;
         this.searchExecutorService = searchExecutorService;
     }
 
@@ -43,7 +41,7 @@ public class AppConfiguration {
 
     @Bean
     public ActorSystem actorSystem() {
-        Map<String, Object> actorSystemConfigs = configListener.getConfigurationHandler()
+        Map<String, Object> actorSystemConfigs = configurationHandler
                 .getAkkaActorSystemConfiguration().getAkkaActorSystemConfigurationMap();
         Object configurations = actorSystemConfigs.values().iterator().next();
         ActorSystem system = ActorSystem.create(AZZIMOV_SEARCH_ACTOR_SYSTEM,

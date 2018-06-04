@@ -34,7 +34,6 @@ import com.azzimov.search.common.text.AzzimovTextProcessor;
 import com.azzimov.search.common.text.AzzimovTextQuery;
 import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SearchConfiguration;
-import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.cache.AzzimovCacheManager;
 import com.azzimov.search.services.feedback.AzzimovFeedbackPersistRequest;
 import com.azzimov.search.services.search.executors.AzzimovAggregateExecutor;
@@ -74,7 +73,7 @@ import static com.azzimov.search.system.spring.AppConfiguration.SESSION_LEARN_AC
 public class SessionLearningGeneratorActor extends AbstractActor {
     // SessionLearningGenerator retrieve information on new sessions and it's respective feedbacks and regenerate the
     // feedback models. we temporarily write these session models to the cache and make them expire with time.
-    private ConfigurationHandler configurationHandler;
+    private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
     private AzzimovCacheManager azzimovCacheManager;
     private Map<SessionEntryType, Map<FeedbackAttribute, Float>> categoryAttributeStatistics = new HashMap<>();
     private static final Logger log = LogManager.getLogger(SessionLearningGeneratorActor.class);
@@ -84,11 +83,9 @@ public class SessionLearningGeneratorActor extends AbstractActor {
 
 
     public SessionLearningGeneratorActor(AzzimovCacheManager azzimovCacheManager,
-                                         SearchExecutorService searchExecutorService,
-                                         ConfigListener configListener) {
+                                         SearchExecutorService searchExecutorService) {
         this.azzimovCacheManager = azzimovCacheManager;
         this.searchExecutorService = searchExecutorService;
-        this.configurationHandler = configListener.getConfigurationHandler();
     }
 
     @Override

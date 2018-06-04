@@ -8,8 +8,8 @@ import com.azzimov.search.common.cache.providers.CacheServiceProvider;
 import com.azzimov.search.common.cache.service.CacheService;
 import com.azzimov.search.common.cache.service.ExecutorService;
 import com.azzimov.search.common.dto.serializers.datetime.CustomDateSerializer;
+import com.azzimov.search.common.util.config.ConfigurationHandler;
 import com.azzimov.search.common.util.config.SystemConfiguration;
-import com.azzimov.search.listeners.ConfigListener;
 import com.azzimov.search.services.search.learn.LearnStatModelService;
 import com.azzimov.trinity.common.learning.util.CustomDateDeserializer;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -31,11 +31,11 @@ import static com.azzimov.search.services.search.learn.LearnCentroidCluster.CENT
  */
 @Component
 public class AzzimovCacheManager {
-    private ConfigListener configListener;
     private CouchbaseExecutor couchbaseExecutor = null;
     private CouchbaseConnector couchbaseConnector = null;
     private CouchbaseConfiguration couchbaseConfiguration = null;
     private CouchbaseCacheKeyListenerService couchbaseCacheKeyListenerService;
+    private ConfigurationHandler configurationHandler = ConfigurationHandler.getInstance();
 
     @Autowired
     public void setLearnStatModelService(LearnStatModelService learnStatModelService) {
@@ -58,11 +58,11 @@ public class AzzimovCacheManager {
      * @return success of operation
      */
     boolean createAzzimovCacheExecutor() {
-        List<Object> hostObjects = configListener.getConfigurationHandler()
+        List<Object> hostObjects = configurationHandler
                 .getObjectConfigList(SystemConfiguration.COUCH_SERVER_NODES);
-        List<Object> bucketObjects = configListener.getConfigurationHandler()
+        List<Object> bucketObjects = configurationHandler
                 .getObjectConfigList(SystemConfiguration.COUCH_BUCKETS);
-        int couchbasePort = configListener.getConfigurationHandler().getIntConfig(SystemConfiguration.COUCH_CACHE_PORT);
+        int couchbasePort = configurationHandler.getIntConfig(SystemConfiguration.COUCH_CACHE_PORT);
         List<String> hosts = new ArrayList<>();
         List<String> buckets = new ArrayList<>();
         if(!CollectionUtils.isEmpty(hostObjects)){
@@ -120,11 +120,6 @@ public class AzzimovCacheManager {
     public <U> CacheService<U> getCacheProvider(Class<U> tClass) {
         return new CacheServiceProvider<>
                 (executorService,tClass, this.couchbaseConnector, objectMapper);
-    }
-
-    @Autowired
-    public void setConfigListener(ConfigListener configListener) {
-        this.configListener = configListener;
     }
 
     private static ObjectMapper createObjectMapper() {
